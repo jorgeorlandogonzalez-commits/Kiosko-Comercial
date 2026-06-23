@@ -1,0 +1,33 @@
+
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/SVG_Logo.svg/1200px-SVG_Logo.svg.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kiosko Comercial - POS & DIAN</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                red: '#D62828',       // Rojo principal (Botones, acentos)
+                darkRed: '#981111',   // Rojo oscuro (Hover, bordes)
+                black: '#111111',     // Fondos oscuros, textos principales
+                gray: '#F3F4F6',      // Fondos claros
+                white: '#FFFFFF'
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="/index.css">
+  </head>
+  <body class="bg-gray-50 text-gray-900 antialiased selection:bg-brand-red selection:text-white">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

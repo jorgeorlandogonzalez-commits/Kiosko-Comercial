@@ -1,0 +1,6 @@
+{
+  "name": "Kiosko Comercial",
+  "description": "Plataforma de gestión comercial y facturación electrónica masiva de bajo costo. Diseñado para el mercado nacional.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

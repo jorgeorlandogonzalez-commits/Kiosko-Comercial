@@ -1,0 +1,173 @@
+{
+  "entities": {
+    "StoreSettings": {
+      "title": "StoreSettings",
+      "description": "Configuración general de la tienda",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "businessName": { "type": "string" },
+        "nit": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "resolution": { "type": "string" },
+        "resolutionDate": { "type": "string" },
+        "prefix": { "type": "string" },
+        "rangeStart": { "type": "number" },
+        "rangeEnd": { "type": "number" },
+        "resolutionValidity": { "type": "string" },
+        "currentNumber": { "type": "number" },
+        "vatResponsibility": { "type": "string" },
+        "isRetainer": { "type": "boolean" },
+        "softwareName": { "type": "string" },
+        "softwareManufacturer": { "type": "string" },
+        "customFooter": { "type": "string" },
+        "techProvider": { "type": "string" },
+        "dianApiKey": { "type": "string" },
+        "dianSoftwareId": { "type": "string" },
+        "dianPin": { "type": "string" },
+        "dianTestSetId": { "type": "string" },
+        "certificateName": { "type": "string" },
+        "certificateExpiry": { "type": "string" }
+      }
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Producto en inventario",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "cost": { "type": "number" },
+        "price": { "type": "number" },
+        "taxRate": { "type": "number" },
+        "consumptionTax": { "type": "number" },
+        "category": { "type": "string" },
+        "stock": { "type": "number" },
+        "icon": { "type": "string" },
+        "ean": { "type": "string" },
+        "lastCountDate": { "type": "string" },
+        "isQuickAccess": { "type": "boolean" }
+      }
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Factura de venta",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerNit": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "customerAddress": { "type": "string" },
+        "sellerName": { "type": "string" },
+        "items": { "type": "array" },
+        "subtotal": { "type": "number" },
+        "tax": { "type": "number" },
+        "consumptionTaxTotal": { "type": "number" },
+        "discount": { "type": "number" },
+        "shippingCost": { "type": "number" },
+        "total": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "paymentDetails": { "type": "array" },
+        "dianStatus": { "type": "string" },
+        "cufe": { "type": "string" },
+        "operatorName": { "type": "string" },
+        "status": { "type": "string" }
+      }
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Gasto operacional",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "reference": { "type": "string" }
+      }
+    },
+    "Quote": {
+      "title": "Quote",
+      "description": "Cotización para cliente",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerNit": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "items": { "type": "array" },
+        "total": { "type": "number" }
+      }
+    },
+    "Operator": {
+      "title": "Operator",
+      "description": "Operador o cajero",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "email": { "type": "string" }
+      }
+    },
+    "Subscription": {
+      "title": "Subscription",
+      "description": "Estado de la suscripción SaaS del usuario",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "status": { "type": "string" },
+        "plan": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "trialEndsAt": { "type": "string" },
+        "paidAt": { "type": "string" },
+        "transactionId": { "type": "string" },
+        "nextBillingAt": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/subscriptions/{userId}": {
+      "schema": { "$ref": "#/entities/Subscription" },
+      "description": "Suscripción activa o de prueba del usuario"
+    },
+    "/users/{userId}/storeSettings/{settingId}": {
+      "schema": { "$ref": "#/entities/StoreSettings" },
+      "description": "Configuración de la tienda"
+    },
+    "/users/{userId}/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Inventario de productos"
+    },
+    "/users/{userId}/invoices/{invoiceId}": {
+      "schema": { "$ref": "#/entities/Invoice" },
+      "description": "Facturas de venta"
+    },
+    "/users/{userId}/quotes/{quoteId}": {
+      "schema": { "$ref": "#/entities/Quote" },
+      "description": "Cotizaciones"
+    },
+    "/users/{userId}/expenses/{expenseId}": {
+      "schema": { "$ref": "#/entities/Expense" },
+      "description": "Gastos registrados"
+    },
+    "/users/{userId}/operators/{operatorId}": {
+      "schema": { "$ref": "#/entities/Operator" },
+      "description": "Operadores autorizados"
+    },
+    "/users/{userId}/data/{documentId}": {
+      "schema": { "type": "object" },
+      "description": "Listados genéricos (clientes, proveedores, cxc, cxp, kardex)"
+    }
+  }
+}
