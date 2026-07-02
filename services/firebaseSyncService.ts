@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, onSnapshot, getDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, onSnapshot, getDoc, writeBatch } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 
 export enum OperationType {
@@ -91,6 +91,12 @@ export const syncCollection = <T extends { id: string }>(
   return unsubscribe;
 };
 
+// Helper para limpiar undefined antes de guardar en firestore
+const cleanUndefined = (obj: any): any => {
+  if (obj === undefined) return null; // Convertir undefined a null para firestore (o se podria omitir pero con json parse se omiten)
+  return JSON.parse(JSON.stringify(obj));
+};
+
 // Helper para guardar un documento en Firestore (colección)
 export const saveToFirestore = async <T extends { id: string }>(
   userId: string,
@@ -101,7 +107,8 @@ export const saveToFirestore = async <T extends { id: string }>(
   const docPath = `users/${userId}/${collectionName}/${item.id}`;
   try {
     const docRef = doc(db, `users/${userId}/${collectionName}`, item.id);
-    await setDoc(docRef, item, { merge: true });
+    const cleanItem = cleanUndefined(item);
+    await setDoc(docRef, cleanItem, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, docPath);
   }
@@ -117,7 +124,8 @@ export const saveArrayToFirestore = async <T>(
   const docPath = `users/${userId}/data/${documentName}`;
   try {
     const docRef = doc(db, `users/${userId}/data`, documentName);
-    await setDoc(docRef, { items: data }, { merge: true });
+    const cleanData = cleanUndefined({ items: data });
+    await setDoc(docRef, cleanData, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, docPath);
   }
@@ -147,4 +155,20 @@ export const syncArrayDocument = <T>(
   });
 
   return unsubscribe;
+};
+
+// Helper para eliminar un documento en Firestore
+export const deleteFromFirestore = async (
+  userId: string,
+  collectionName: string,
+  itemId: string
+) => {
+  if (!userId || !auth.currentUser) return;
+  const docPath = `users/${userId}/${collectionName}/${itemId}`;
+  try {
+    const docRef = doc(db, `users/${userId}/${collectionName}`, itemId);
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, docPath);
+  }
 };

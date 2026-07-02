@@ -1,6 +1,6 @@
 
 import { Product, Customer, Supplier, Invoice, Quote, Order, CreditAccount, KardexEntry, SupplierAccount, Expense } from '../types';
-import { saveToFirestore, saveArrayToFirestore, syncCollection, syncArrayDocument } from './firebaseSyncService';
+import { saveToFirestore, saveArrayToFirestore, syncCollection, syncArrayDocument, deleteFromFirestore } from './firebaseSyncService';
 
 const KEYS = {
   PRODUCTS: 'kiosko_products',
@@ -235,5 +235,43 @@ export const dbService = {
     if (currentUserId) {
       saveToFirestore(currentUserId, 'storeSettings', { id: 'default', ...settings });
     }
+  },
+  
+  clearAllData: async (userId: string) => {
+    // Para borrar de Firestore necesitamos borrar los documentos de las colecciones.
+    // Usamos los IDs locales para borrarlos.
+    const products = dbService.getProducts();
+    const invoices = dbService.getInvoices();
+    const quotes = dbService.getQuotes();
+    const orders = dbService.getOrders();
+    const expenses = dbService.getExpenses();
+    const settings = dbService.getStoreSettings();
+
+    // Eliminar datos estructurados en documentos (arrays)
+    await saveArrayToFirestore(userId, 'customers', []);
+    await saveArrayToFirestore(userId, 'suppliers', []);
+    await saveArrayToFirestore(userId, 'credit_accounts', []);
+    await saveArrayToFirestore(userId, 'supplier_accounts', []);
+    await saveArrayToFirestore(userId, 'kardex', []);
+    await saveArrayToFirestore(userId, 'categories', INITIAL_CATEGORIES);
+
+    // Eliminar documentos de colecciones
+    const deletes = [];
+    products.forEach(p => deletes.push(deleteFromFirestore(userId, 'products', p.id)));
+    invoices.forEach(i => deletes.push(deleteFromFirestore(userId, 'invoices', i.id)));
+    quotes.forEach(q => deletes.push(deleteFromFirestore(userId, 'quotes', q.id)));
+    orders.forEach(o => deletes.push(deleteFromFirestore(userId, 'orders', o.id)));
+    expenses.forEach(e => deletes.push(deleteFromFirestore(userId, 'expenses', e.id)));
+    deletes.push(deleteFromFirestore(userId, 'storeSettings', 'default'));
+    
+    await Promise.all(deletes);
+
+    // Borrar de localStorage
+    const keys = Object.values(KEYS);
+    keys.push('kiosko_settings');
+    keys.forEach(key => {
+        const activeKey = `kiosko_${userId}_${key.replace('kiosko_', '')}`;
+        localStorage.removeItem(activeKey);
+    });
   }
 };

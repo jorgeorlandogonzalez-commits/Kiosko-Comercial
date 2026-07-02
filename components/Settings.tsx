@@ -51,8 +51,17 @@ export const Settings: React.FC<SettingsProps> = ({ settings, onSave, userId, on
       setShowResetModal(true);
   };
 
-  const confirmFactoryReset = () => {
-      localStorage.clear();
+  const confirmFactoryReset = async () => {
+      if (userId) {
+          try {
+              const { dbService } = await import('../services/storageService');
+              await dbService.clearAllData(userId);
+          } catch (error) {
+              console.error("Error clearing firestore data", error);
+          }
+      } else {
+          localStorage.clear();
+      }
       window.location.reload();
   };
 
