@@ -1,6 +1,6 @@
 import express from "express";
 import path from "path";
-import { promises as fs } from "fs";
+import fsSync, { promises as fs } from "fs";
 import cors from "cors";
 import admin from "firebase-admin";
 import rateLimit from "express-rate-limit";
@@ -146,7 +146,13 @@ app.post("/api/gemini/assistant", assistantLimit, async (req, res) => {
 
 // Vite middleware para desarrollo y frontend estático en producción
 async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
+  const distPath = path.join(process.cwd(), "dist");
+  const hasDist = fsSync.existsSync(distPath);
+
+  if (process.env.NODE_ENV !== "production" || !hasDist) {
+    if (process.env.NODE_ENV === "production" && !hasDist) {
+      console.warn("⚠️ NODE_ENV is production but dist/ does not exist. Falling back to Vite middleware.");
+    }
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
