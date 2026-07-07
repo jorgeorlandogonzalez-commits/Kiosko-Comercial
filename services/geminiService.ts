@@ -18,13 +18,17 @@ export const askGeminiAssistant = async (query: string, contextData: string): Pr
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error || `HTTP error! status: ${response.status}`);
+      throw new Error(errData.error || `Error del servidor: ${response.status}`);
     }
 
     const data = await response.json();
     return data.text || "Lo siento, socio. ¿Podrías repetirme eso? Mi calculadora se bloqueó un momento.";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error al invocar el Asistente Don J:", error);
+    // Si el error tiene un mensaje específico (como el límite de tasa o error de API key), mostrarlo
+    if (error.message && error.message !== "Failed to fetch") {
+      return `Ups, un problemita: ${error.message}`;
+    }
     return "Lo siento, socio. Hubo un pequeño fallo de conexión. Inténtalo de nuevo en unos minutos o verifica con soporte.";
   }
 };

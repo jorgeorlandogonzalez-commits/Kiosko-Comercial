@@ -48,6 +48,7 @@ function getGeminiClient(): GoogleGenAI {
 }
 
 const app = express();
+app.set("trust proxy", 1); // Necesario para express-rate-limit detrás de un proxy (ej. Cloud Run)
 const isProd = process.env.NODE_ENV === "production";
 
 app.use(cors({ origin: true }));
