@@ -15,7 +15,10 @@
     "rewrites": [
       {
         "source": "/api/**",
-        "function": "kiosko_api"
+        "run": {
+          "serviceId": "kiosko-backend",
+          "region": "us-central1"
+        }
       },
       {
         "source": "**",
