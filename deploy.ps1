@@ -33,17 +33,17 @@ try {
 
     if ($targetLower -eq "rules" -or $targetLower -eq "all") {
         Write-Host "[INFO] Desplegando Reglas..."
-        firebase deploy --only firestore:rules,storage --project $PROJECT_ID
+        npx firebase deploy --only firestore:rules,storage --project $PROJECT_ID
     }
     
     if ($targetLower -eq "functions" -or $targetLower -eq "all") {
         Write-Host "[INFO] Desplegando Functions..."
-        firebase deploy --only functions:kiosko_api --project $PROJECT_ID
+        npx firebase deploy --only functions:kiosko_api --project $PROJECT_ID
     }
     
     if ($targetLower -eq "hosting" -or $targetLower -eq "all") {
         Write-Host "[INFO] Desplegando Hosting..."
-        firebase deploy --only hosting --project $PROJECT_ID
+        npx firebase deploy --only hosting --project $PROJECT_ID
     }
     
     if ($targetLower -ne "rules" -and $targetLower -ne "functions" -and $targetLower -ne "hosting" -and $targetLower -ne "all") {

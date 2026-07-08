@@ -62,7 +62,7 @@ echo -e "${GREEN}[INFO] ✅ Validaciones pre-vuelo completadas.${NC}"
 
 deploy_hosting() {
   echo -e "${BLUE}[INFO] 🌐 Desplegando Firebase Hosting...${NC}"
-  firebase deploy --only hosting --project $PROJECT_ID || {
+  npx firebase deploy --only hosting --project $PROJECT_ID || {
     echo -e "${RED}[ERROR] ❌ Falló el despliegue de Hosting${NC}"
     return 1
   }
@@ -71,7 +71,7 @@ deploy_hosting() {
 
 deploy_functions() {
   echo -e "${BLUE}[INFO] ⚡ Desplegando Cloud Functions...${NC}"
-  firebase deploy --only functions --project $PROJECT_ID || {
+  npx firebase deploy --only functions --project $PROJECT_ID || {
     echo -e "${RED}[ERROR] ❌ Falló el despliegue de Functions${NC}"
     return 1
   }
@@ -80,12 +80,12 @@ deploy_functions() {
 
 deploy_rules() {
   echo -e "${BLUE}[INFO] 🔒 Desplegando reglas de Firestore...${NC}"
-  firebase deploy --only firestore:rules --project $PROJECT_ID || {
+  npx firebase deploy --only firestore:rules --project $PROJECT_ID || {
     echo -e "${YELLOW}[WARN] ⚠️  No se pudieron desplegar las reglas de Firestore${NC}"
   }
   
   echo -e "${BLUE}[INFO] 📦 Desplegando reglas de Storage...${NC}"
-  firebase deploy --only storage --project $PROJECT_ID || {
+  npx firebase deploy --only storage --project $PROJECT_ID || {
     echo -e "${YELLOW}[WARN] ⚠️  No se pudieron desplegar las reglas de Storage. Esto ocurre si no has habilitado Firebase Storage en la consola web de tu proyecto ($PROJECT_ID). Puedes habilitarlo en https://console.firebase.google.com/ y reintentar. Continuando con el despliegue...${NC}"
   }
   
