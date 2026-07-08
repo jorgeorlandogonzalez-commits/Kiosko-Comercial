@@ -17,8 +17,16 @@ export const askGeminiAssistant = async (query: string, contextData: string): Pr
     });
 
     if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
+      const isJson = response.headers.get("content-type")?.includes("application/json");
+      const errData = isJson ? await response.json().catch(() => ({})) : {};
       throw new Error(errData.error || `Error del servidor: ${response.status}`);
+    }
+
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      // El servidor devolvió algo que no es JSON (probablemente una página HTML de "Iniciando contenedor")
+      // Esto pasa a veces en el entorno de desarrollo cuando el contenedor se reinicia.
+      throw new Error("El servidor se está reiniciando. Por favor, intenta de nuevo en unos segundos.");
     }
 
     const data = await response.json();
