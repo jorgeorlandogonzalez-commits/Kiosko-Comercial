@@ -7,11 +7,12 @@ import { auth } from '../firebase';
 interface PricingPlansProps {
   onSelectPlan: (plan: PlanTier, isTrial: boolean) => void;
   isTrialExpired?: boolean;
+  isInTrial?: boolean;
 }
 
 type PaymentMethodType = 'CARD' | 'PSE' | 'BANCOLOMBIA';
 
-export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTrialExpired = false }) => {
+export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTrialExpired = false, isInTrial = false }) => {
   const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
   const [showPayment, setShowPayment] = useState<PlanTier | null>(null);
   
@@ -27,7 +28,7 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTria
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleSubscribe = async (plan: PlanTier) => {
-    if (plan === 'PRO' && !isTrialExpired) {
+    if (plan === 'PRO' && !isTrialExpired && !isInTrial) {
         setIsProcessing(true);
         try {
             const user = auth.currentUser;
@@ -362,11 +363,11 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTria
                 onClick={() => handleSubscribe('PRO')} 
                 className="w-full py-4 bg-brand-red text-white font-black rounded-xl uppercase tracking-widest text-xs hover:bg-brand-darkRed shadow-xl hover:shadow-2xl transition-all flex items-center justify-center gap-2 group active:scale-95"
               >
-                  {isTrialExpired ? 'Activar Licencia Ahora' : 'Empezar Prueba Gratis'} 
+                  {isTrialExpired ? 'Activar Licencia Ahora' : (isInTrial ? 'Pasar a PRO Ahora' : 'Empezar Prueba Gratis')} 
                   <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform"/>
               </button>
               
-              {!isTrialExpired && (
+              {!isTrialExpired && !isInTrial && (
                   <div className="mt-4 flex flex-col items-center gap-2">
                       <p className="text-[9px] text-gray-400 font-bold uppercase flex items-center justify-center gap-1">
                           <Check size={10} className="text-green-500"/> Sin tarjeta de crédito para probar

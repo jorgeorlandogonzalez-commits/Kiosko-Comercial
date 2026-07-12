@@ -1311,7 +1311,7 @@ function MainApp() {
     <div className="flex items-center justify-center min-h-screen bg-gray-900 transition-all">
       {/* SaaS Pricing Overlay */}
       {showPricing && (
-          <PricingPlans onSelectPlan={handleSelectPlan} isTrialExpired={isSubscriptionExpired} />
+          <PricingPlans onSelectPlan={handleSelectPlan} isTrialExpired={isSubscriptionExpired} isInTrial={trialDaysLeft !== null && trialDaysLeft > 0} />
       )}
 
       <div className="w-full h-full min-h-screen bg-gray-50 flex flex-col transition-all duration-300 ease-in-out relative">
