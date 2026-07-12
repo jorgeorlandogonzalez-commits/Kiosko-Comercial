@@ -675,7 +675,7 @@ function MainApp() {
             const entry: KardexEntry = {
                 id: `KDX-DEL-BUY-${Date.now()}-${o.productId}`,
                 date: getColombiaISO(),
-                productId: o.productId,
+                productId: o.productId || '',
                 productName: o.productName,
                 type: 'AJUSTE_MANUAL',
                 quantity: -o.quantity,
@@ -752,7 +752,7 @@ function MainApp() {
             const entry: KardexEntry = {
                 id: `KDX-REV-${Date.now()}-${oldOrder.productId}`,
                 date: getColombiaISO(),
-                productId: oldOrder.productId,
+                productId: oldOrder.productId || '',
                 productName: oldOrder.productName,
                 type: 'AJUSTE_MANUAL',
                 quantity: -oldOrder.quantity,
