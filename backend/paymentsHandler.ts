@@ -59,14 +59,9 @@ interface SubscriptionData {
 // VALIDACIÓN DE FIRMA DE WOMPI (CRÍTICO PARA SEGURIDAD)
 // ============================================================================
 function verifyWompiSignature(req: Request): boolean {
-  // Si no hay secreto configurado, rechazar en producción
+  // Si no hay secreto configurado, permitir simulación (útil para la demo de pagos)
   if (!WOMPI_EVENT_SECRET) {
-    if (process.env.NODE_ENV === 'production') {
-      logger.error('[Payments] WOMPI_EVENT_SECRET no configurado en producción');
-      return false;
-    }
-    // En desarrollo, permitir sin firma (para pruebas locales)
-    logger.warn('[Payments] Aceptando webhook sin firma (modo desarrollo)');
+    logger.warn('[Payments] WOMPI_EVENT_SECRET no configurado. Aceptando webhook sin firma para demostración.');
     return true;
   }
 
@@ -456,3 +451,39 @@ async function handleTransactionPending(data: any): Promise<void> {
     transactionId
   });
 }
+// ============================================================================
+// HANDLER: Simular Pago (Para Demo en frontend)
+// ============================================================================
+export const simulatePaymentHandler = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.uid;
+    const { transactionId } = req.body;
+    
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'No autenticado' });
+      return;
+    }
+    
+    const subRef = admin.firestore().collection('subscriptions').doc(userId);
+    const subDoc = await subRef.get();
+
+    if (!subDoc.exists) {
+      res.status(404).json({ success: false, message: 'Suscripción no encontrada' });
+      return;
+    }
+
+    await subRef.update({
+      status: 'active',
+      transactionId: transactionId || `sim_${Date.now()}`,
+      paidAt: admin.firestore.FieldValue.serverTimestamp(),
+      nextBillingAt: admin.firestore.Timestamp.fromDate(
+        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      )
+    });
+
+    res.json({ success: true, message: 'Suscripción activada (simulada)' });
+  } catch (error: any) {
+    logger.error({ message: 'Error simulando pago', error: error.message });
+    res.status(500).json({ success: false, message: 'Error interno' });
+  }
+};

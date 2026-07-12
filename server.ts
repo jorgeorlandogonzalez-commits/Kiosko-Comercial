@@ -9,7 +9,7 @@ import { GoogleGenAI } from "@google/genai";
 import pino from "pino";
 import os from "os";
 import { dianTransmitHandler, verifyFirebaseToken } from "./backend/dianBackendHandlers.js";
-import { createSubscriptionHandler, wompiWebhookHandler, getSubscriptionStatusHandler } from "./backend/paymentsHandler.js";
+import { createSubscriptionHandler, wompiWebhookHandler, getSubscriptionStatusHandler, simulatePaymentHandler } from "./backend/paymentsHandler.js";
 
 // Logger estructurado
 const logger = pino({ level: 'info' });
@@ -98,6 +98,7 @@ app.get("/api/health", (req, res) => {
 });
 
 app.post("/api/dian/transmit", verifyFirebaseToken, dianLimit, dianTransmitHandler);
+app.post("/api/payments/simulate", verifyFirebaseToken, simulatePaymentHandler);
 app.post("/api/payments/create-subscription", verifyFirebaseToken, createSubscriptionHandler);
 app.post("/api/payments/webhook", wompiWebhookHandler);
 app.get("/api/payments/status/:userId", verifyFirebaseToken, getSubscriptionStatusHandler);

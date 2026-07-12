@@ -86,17 +86,15 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTria
           
           await new Promise(resolve => setTimeout(resolve, 1500)); // Simulación de transferencia
 
-          const webhookResponse = await fetch('/api/payments/webhook', {
+          const token = await user.getIdToken();
+          const webhookResponse = await fetch('/api/payments/simulate', {
               method: 'POST',
               headers: {
-                  'Content-Type': 'application/json'
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
               },
               body: JSON.stringify({
-                  event: 'transaction_approved',
-                  data: {
-                      reference: user.uid,
-                      id: simulatedTxId
-                  }
+                  transactionId: simulatedTxId
               })
           });
 
