@@ -345,9 +345,8 @@ function MainApp() {
   };
 
   const handleDeleteProduct = (id: string) => {
-      const updated = products.filter(p => p.id !== id);
+      const updated = dbService.deleteProduct(id);
       setProducts(updated);
-      dbService.saveProducts(updated);
   };
 
   const handlePhysicalCount = (productId: string, newStock: number) => {
@@ -1222,13 +1221,10 @@ function MainApp() {
   };
 
   const handleDeleteExpense = (id: string) => {
-      setExpenses(prev => {
-          const updated = prev.filter(e => e.id !== id);
-          dbService.saveExpenses(updated);
-          return updated;
-      });
-  };
+      const updated = dbService.deleteExpense(id);
+      setExpenses(updated);
 
+  };
   const handleEditExpense = (updatedExpense: Expense) => {
       setExpenses(prev => {
           const updated = prev.map(e => e.id === updatedExpense.id ? updatedExpense : e);

@@ -1,3 +1,5 @@
+import { getFirestore } from "firebase-admin/firestore";
+import { getApp } from "firebase-admin/app";
 import { Request, Response } from 'express';
 import admin from 'firebase-admin';
 import crypto from 'crypto';
@@ -110,7 +112,7 @@ export const createSubscriptionHandler = async (req: Request, res: Response) => 
     }
 
     // Verificar si ya tiene suscripción
-    const existingSub = await admin.firestore()
+    const existingSub = await getFirestore(getApp(), 'ai-studio-745f93d7-7ad5-4ca5-ac57-45443e5e4b15')
       .collection('subscriptions')
       .doc(userId)
       .get();
@@ -143,7 +145,7 @@ export const createSubscriptionHandler = async (req: Request, res: Response) => 
       trialEndsAt: admin.firestore.Timestamp.fromDate(trialEndsAt)
     };
 
-    await admin.firestore()
+    await getFirestore(getApp(), 'ai-studio-745f93d7-7ad5-4ca5-ac57-45443e5e4b15')
       .collection('subscriptions')
       .doc(userId)
       .set(subscriptionData);
@@ -214,7 +216,7 @@ export const wompiWebhookHandler = async (req: Request, res: Response) => {
 
     // ✅ PASO 2: Idempotencia - Verificar que no hemos procesado este webhook antes
     if (userId && transactionId) {
-      const existingSub = await admin.firestore()
+      const existingSub = await getFirestore(getApp(), 'ai-studio-745f93d7-7ad5-4ca5-ac57-45443e5e4b15')
         .collection('subscriptions')
         .doc(userId)
         .get();
@@ -274,7 +276,7 @@ export const getSubscriptionStatusHandler = async (req: Request, res: Response) 
       return;
     }
 
-    const subscription = await admin.firestore()
+    const subscription = await getFirestore(getApp(), 'ai-studio-745f93d7-7ad5-4ca5-ac57-45443e5e4b15')
       .collection('subscriptions')
       .doc(userId)
       .get();
@@ -297,7 +299,7 @@ export const getSubscriptionStatusHandler = async (req: Request, res: Response) 
 
     // Actualizar estado si el trial expiró
     if (isTrialExpired) {
-      await admin.firestore()
+      await getFirestore(getApp(), 'ai-studio-745f93d7-7ad5-4ca5-ac57-45443e5e4b15')
         .collection('subscriptions')
         .doc(userId)
         .update({ status: 'expired' });
@@ -355,7 +357,7 @@ async function handleTransactionApproved(data: any): Promise<void> {
   }
 
   // ✅ PASO 4: Verificar que el documento de suscripción existe
-  const subRef = admin.firestore().collection('subscriptions').doc(userId);
+  const subRef = getFirestore(getApp(), 'ai-studio-745f93d7-7ad5-4ca5-ac57-45443e5e4b15').collection('subscriptions').doc(userId);
   const subDoc = await subRef.get();
 
   if (!subDoc.exists) {
@@ -395,7 +397,7 @@ async function handleTransactionDeclined(data: any): Promise<void> {
   }
 
   // Verificar que el documento existe antes de actualizar
-  const subRef = admin.firestore().collection('subscriptions').doc(userId);
+  const subRef = getFirestore(getApp(), 'ai-studio-745f93d7-7ad5-4ca5-ac57-45443e5e4b15').collection('subscriptions').doc(userId);
   const subDoc = await subRef.get();
 
   if (!subDoc.exists) {
@@ -427,7 +429,7 @@ async function handleTransactionPending(data: any): Promise<void> {
   if (!userId) return;
 
   // Verificar que el documento existe
-  const subRef = admin.firestore().collection('subscriptions').doc(userId);
+  const subRef = getFirestore(getApp(), 'ai-studio-745f93d7-7ad5-4ca5-ac57-45443e5e4b15').collection('subscriptions').doc(userId);
   const subDoc = await subRef.get();
 
   if (!subDoc.exists) {
@@ -464,7 +466,7 @@ export const simulatePaymentHandler = async (req: Request, res: Response) => {
       return;
     }
     
-    const subRef = admin.firestore().collection('subscriptions').doc(userId);
+    const subRef = getFirestore(getApp(), 'ai-studio-745f93d7-7ad5-4ca5-ac57-45443e5e4b15').collection('subscriptions').doc(userId);
     const subDoc = await subRef.get();
 
     if (!subDoc.exists) {

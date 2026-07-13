@@ -45,6 +45,9 @@ const getScopedKey = (key: string) => {
 export const logoutDbService = () => {
   unsubscribes.forEach(unsub => unsub());
   unsubscribes = [];
+  
+  // Forzar recarga inmediata con el nuevo userId local
+  if (onSyncUpdateCallback) onSyncUpdateCallback();
   currentUserId = null;
 };
 
@@ -55,6 +58,9 @@ export const initDbService = (userId: string, onUpdate: () => void) => {
   // Limpiar suscripciones anteriores si las hay
   unsubscribes.forEach(unsub => unsub());
   unsubscribes = [];
+  
+  // Forzar recarga inmediata con el nuevo userId local
+  if (onSyncUpdateCallback) onSyncUpdateCallback();
 
   // Iniciar Sincronización en tiempo real desde Firebase hacia localStorage aislado
   unsubscribes.push(
@@ -74,7 +80,7 @@ export const initDbService = (userId: string, onUpdate: () => void) => {
           delete settings.id; // Remove the 'default' id
           const activeSettingsKey = `kiosko_${userId}_settings`;
           localStorage.setItem(activeSettingsKey, JSON.stringify(settings));
-          onUpdate();
+          if (onSyncUpdateCallback) onSyncUpdateCallback();
         }
       }
     }),
@@ -110,6 +116,13 @@ const saveToStorage = <T>(key: string, data: T[]) => {
 
 export const dbService = {
   getProducts: (): Product[] => getFromStorage(KEYS.PRODUCTS, INITIAL_PRODUCTS),
+  deleteProduct: (id: string) => {
+    const current = dbService.getProducts();
+    const updated = current.filter(p => p.id !== id);
+    saveToStorage(KEYS.PRODUCTS, updated);
+    if (currentUserId) deleteFromFirestore(currentUserId, "products", id);
+    return updated;
+  },
   saveProducts: (products: Product[]) => {
     saveToStorage(KEYS.PRODUCTS, products);
     if (currentUserId) {
@@ -160,7 +173,7 @@ export const dbService = {
       const current = dbService.getInvoices();
       const updated = current.filter(i => i.id !== id);
       saveToStorage(KEYS.INVOICES, updated);
-      // Nota: Para borrar de firestore se necesitaría una función deleteFromFirestore
+      if (currentUserId) deleteFromFirestore(currentUserId, "quotes", id);
       return updated;
   },
 
@@ -217,6 +230,13 @@ export const dbService = {
   },
 
   getExpenses: (): Expense[] => getFromStorage(KEYS.EXPENSES, []),
+  deleteExpense: (id: string) => {
+    const current = dbService.getExpenses();
+    const updated = current.filter(e => e.id !== id);
+    saveToStorage(KEYS.EXPENSES, updated);
+    if (currentUserId) deleteFromFirestore(currentUserId, "expenses", id);
+    return updated;
+  },
   saveExpenses: (expenses: Expense[]) => {
     saveToStorage(KEYS.EXPENSES, expenses);
     if (currentUserId) {
