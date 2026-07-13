@@ -48,20 +48,42 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTria
                 body: JSON.stringify({ plan: 'PRO' })
             });
 
-            if (!response.ok) {
-                throw new Error("Respuesta no exitosa del servidor.");
-            }
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                if (!response.ok) {
+                    throw new Error("Respuesta no exitosa del servidor.");
+                }
 
-            const data = await response.json();
-            if (data.success) {
-                alert(`¡Espectacular, socio! Tu Prueba Gratis de 15 Días ha sido activada con éxito. Trial válido hasta: ${new Date(data.trialEndsAt).toLocaleDateString()}`);
-                onSelectPlan('PRO', true);
+                const data = await response.json();
+                if (data.success) {
+                    const trialEnd = data.trialEndsAt || (data.subscription && data.subscription.trialEndsAt);
+                    let formattedDate = 'pronto';
+                    
+                    if (trialEnd) {
+                        try {
+                            if (typeof trialEnd === 'string') {
+                                formattedDate = new Date(trialEnd).toLocaleDateString();
+                            } else if (trialEnd._seconds) {
+                                formattedDate = new Date(trialEnd._seconds * 1000).toLocaleDateString();
+                            }
+                        } catch (e) {
+                            console.error("Error formatting date", e);
+                        }
+                    }
+                    
+                    alert(`¡Espectacular, socio! Tu Prueba Gratis de 15 Días ha sido activada con éxito. Trial válido hasta: ${formattedDate}`);
+                    onSelectPlan('PRO', true);
+                } else {
+                    alert("Socio, no pudimos procesar la prueba. Inténtalo de nuevo.");
+                }
             } else {
-                alert("Socio, no pudimos procesar la prueba. Inténtalo de nuevo.");
+                // If it's not JSON, it's likely an HTML error page from Cloud Run cold start
+                console.warn("Respuesta no JSON recibida, posible cold start:", await response.text());
+                alert("El servidor se está despertando. Por favor, espera 5 segundos e inténtalo de nuevo.");
             }
         } catch (error) {
             console.error("Error al iniciar trial:", error);
-            alert("Error de red al activar el periodo de prueba gratis.");
+            alert("Error de red al activar el periodo de prueba gratis. Es posible que el servidor esté despertando, intenta de nuevo en unos segundos.");
         } finally {
             setIsProcessing(false);
         }

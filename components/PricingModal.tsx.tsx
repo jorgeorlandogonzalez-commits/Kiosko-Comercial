@@ -41,18 +41,34 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
         body: JSON.stringify({ plan: 'monthly' })
       });
 
-      const data = await response.json();
-      
-      if (data.success) {
-        setPublicKey(data.publicKey);
-        setTrialEndsAt(new Date(data.trialEndsAt));
-        setShowConfirmation(true);
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+          const data = await response.json();
+          
+          if (data.success) {
+            setPublicKey(data.publicKey);
+            
+            const trialEnd = data.trialEndsAt || (data.subscription && data.subscription.trialEndsAt);
+            if (trialEnd) {
+                if (typeof trialEnd === 'string') {
+                    setTrialEndsAt(new Date(trialEnd));
+                } else if (trialEnd._seconds) {
+                    setTrialEndsAt(new Date(trialEnd._seconds * 1000));
+                } else {
+                    setTrialEndsAt(new Date());
+                }
+            }
+            setShowConfirmation(true);
+          } else {
+            alert(`Error: ${data.message || 'No se pudo crear la suscripción'}`);
+          }
       } else {
-        alert(`Error: ${data.message || 'No se pudo crear la suscripción'}`);
+          console.warn("Respuesta no JSON recibida, posible cold start:", await response.text());
+          alert('El servidor se está despertando. Por favor, espera unos segundos e intenta nuevamente.');
       }
     } catch (error: any) {
       console.error('Error:', error);
-      alert('Error de conexión. Por favor intenta nuevamente.');
+      alert('Error de conexión. Es posible que el servidor esté despertando, intenta de nuevo.');
     } finally {
       setLoading(false);
     }
