@@ -83,6 +83,8 @@ function MainApp() {
     const settings = dbService.getStoreSettings();
     if (settings) {
       setStoreSettings(settings);
+    } else {
+      setStoreSettings(DEFAULT_SETTINGS);
     }
     
     const loadedCredits = dbService.getCreditAccounts();
