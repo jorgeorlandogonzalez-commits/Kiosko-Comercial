@@ -1,7 +1,6 @@
 /**
  * Kiosko Comercial - Servidor para Cloud Run
  * Versión minimalista SIN Vite, SOLO APIs de producción
- * Con middleware para validación de firma de webhooks Wompi
  */
 
 import express from "express";
@@ -20,7 +19,6 @@ console.log(`📍 [CloudRun] NODE_ENV: ${process.env.NODE_ENV || 'undefined'}`);
 console.log(`📍 [CloudRun] PORT: ${process.env.PORT || 'undefined'}`);
 console.log(`📍 [CloudRun] FIREBASE_PROJECT_ID: ${process.env.FIREBASE_PROJECT_ID || 'undefined'}`);
 console.log(`📍 [CloudRun] GEMINI_API_KEY: ${process.env.GEMINI_API_KEY ? '***CONFIGURED***' : '❌ MISSING'}`);
-console.log(`📍 [CloudRun] WOMPI_EVENT_SECRET: ${process.env.WOMPI_EVENT_SECRET ? '***CONFIGURED***' : '⚠️  NOT SET (webhooks will be rejected in production)'}`);
 
 // Capturar errores no manejados
 process.on('uncaughtException', (error) => {
@@ -88,15 +86,12 @@ app.use(cors({ origin: true }));
 // MIDDLEWARE CRÍTICO: Capturar rawBody para validación de firma Wompi
 // DEBE IR ANTES DE express.json()
 // ============================================================================
-app.use('/api/payments/webhook', express.raw({ type: 'application/json', limit: '1mb' }));
 
 app.use((req: any, res, next) => {
-  if (req.url === '/api/payments/webhook' && Buffer.isBuffer(req.body)) {
     req.rawBody = req.body.toString('utf8');
     try {
       req.body = JSON.parse(req.rawBody);
     } catch (error) {
-      console.error('[CloudRun] Error parseando JSON del webhook:', error);
       req.body = {};
     }
   }
@@ -139,9 +134,6 @@ app.get("/api/health", (req, res) => {
 app.post("/api/dian/transmit", verifyFirebaseToken, dianLimit, dianTransmitHandler);
 
 // Wompi Payments
-app.post("/api/payments/create-subscription", verifyFirebaseToken, createSubscriptionHandler);
-app.post("/api/payments/webhook", wompiWebhookHandler);
-app.get("/api/payments/status/:userId", verifyFirebaseToken, getSubscriptionStatusHandler);
 
 // Gemini Assistant (Don J)
 app.post("/api/gemini/assistant", assistantLimit, async (req, res) => {

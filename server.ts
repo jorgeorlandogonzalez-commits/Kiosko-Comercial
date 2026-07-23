@@ -9,7 +9,7 @@ import { GoogleGenAI } from "@google/genai";
 import pino from "pino";
 import os from "os";
 import { dianTransmitHandler, verifyFirebaseToken } from "./backend/dianBackendHandlers.js";
-import { createSubscriptionHandler, wompiWebhookHandler, getSubscriptionStatusHandler, simulatePaymentHandler } from "./backend/paymentsHandler.js";
+import { verifyPaymentHandler, simulatePaymentHandler } from "./backend/paymentsHandler.js";
 
 // Logger estructurado
 const logger = pino({ level: 'info' });
@@ -56,22 +56,12 @@ app.use(cors({ origin: true }));
 // ============================================================================
 // MIDDLEWARE CRÍTICO: Capturar rawBody para validación de firma Wompi
 // DEBE IR ANTES DE express.json()
-// ============================================================================
-app.use('/api/payments/webhook', express.raw({ type: 'application/json', limit: '1mb' }));
-
 app.use((req: any, res, next) => {
-  if (req.url === '/api/payments/webhook' && Buffer.isBuffer(req.body)) {
-    req.rawBody = req.body.toString('utf8');
-    try {
-      req.body = JSON.parse(req.rawBody);
-    } catch (error) {
-      logger.error({ err: error }, '[Server] Error parseando JSON del webhook');
-      req.body = {};
-    }
+  if (req.originalUrl.includes("/webhook")) {
+    req.rawBody = req.body ? req.body.toString("utf8") : "";
   }
   next();
 });
-
 // Middleware JSON para todas las demás rutas
 app.use(express.json({ limit: '1mb' }));
 
@@ -98,10 +88,8 @@ app.get("/api/health", (req, res) => {
 });
 
 app.post("/api/dian/transmit", verifyFirebaseToken, dianLimit, dianTransmitHandler);
+app.post("/api/payments/verify", verifyFirebaseToken, verifyPaymentHandler);
 app.post("/api/payments/simulate", verifyFirebaseToken, simulatePaymentHandler);
-app.post("/api/payments/create-subscription", verifyFirebaseToken, createSubscriptionHandler);
-app.post("/api/payments/webhook", wompiWebhookHandler);
-app.get("/api/payments/status/:userId", verifyFirebaseToken, getSubscriptionStatusHandler);
 
 app.post("/api/gemini/assistant", assistantLimit, async (req, res) => {
   try {

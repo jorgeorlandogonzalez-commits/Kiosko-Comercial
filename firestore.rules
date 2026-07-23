@@ -79,7 +79,18 @@ service cloud.firestore {
     // ===== Reglas de Suscripción =====
     match /subscriptions/{userId} {
       allow read: if isOwner(userId);
-      allow write: if false; // Solo el backend firma y actualiza con admin privileges
+      allow create: if isOwner(userId) && 
+                    incoming().userId == userId && 
+                    incoming().status == 'trial';
+      allow update: if isOwner(userId) && 
+                    (
+                      // Can update itself if changing status requires a signature
+                      (incoming().status == 'active' && incoming().signature == hashing.sha256(utf8.encode(userId + 'ACTIVE' + 'KIOSKO_SECURE_PAYMENTS_2026')).toHexString()) ||
+                      // Or can mark as expired if it was trial
+                      (existing().status == 'trial' && incoming().status == 'expired') ||
+                      // If it's already ACTIVE, allow updating signature? No, just keep it.
+                      (existing().status == 'active' && incoming().status == 'active')
+                    );
     }
 
     // ===== Reglas de Usuario =====

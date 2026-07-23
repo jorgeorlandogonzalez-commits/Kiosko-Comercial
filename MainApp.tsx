@@ -158,7 +158,7 @@ function MainApp() {
       }
   }, [currentUser, storeSettings.subscription]);
 
-  // Sincronizar suscripción física de Wompi desde el Servidor
+  // Sincronizar suscripción física de Wompi desde Firestore (Client SDK)
   useEffect(() => {
     const syncSaaSStatus = async () => {
       if (!currentUser?.id) return;
@@ -168,45 +168,47 @@ function MainApp() {
       if (emailLower === 'info.msdmed@gmail.com' || emailLower === 'jorge.orlando.gonzalez@gmail.com') return;
 
       try {
-        const token = await auth.currentUser?.getIdToken();
-        if (!token) return;
-
-        const response = await fetch(`/api/payments/status/${currentUser.id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
+        const { db } = await import('./firebase');
+        const { doc, getDoc } = await import('firebase/firestore');
+        const subDoc = await getDoc(doc(db, 'subscriptions', currentUser.id));
+        
+        if (subDoc.exists()) {
+          const serverSub = subDoc.data();
+          
+          let mappedStatus = 'TRIAL';
+          if (serverSub.status === 'active') {
+             mappedStatus = 'ACTIVE';
+          } else if (serverSub.status === 'expired') {
+             mappedStatus = 'EXPIRED';
+          } else {
+             // Calculate if trial expired
+             const trialEnds = serverSub.trialEndsAt ? (serverSub.trialEndsAt.toDate ? serverSub.trialEndsAt.toDate() : new Date(serverSub.trialEndsAt)) : new Date();
+             if (trialEnds < new Date()) {
+                mappedStatus = 'EXPIRED';
+             }
           }
-        });
 
-        if (response.ok) {
-          const resData = await response.json();
-          if (resData.success && resData.subscription) {
-            const serverSub = resData.subscription;
+          const currentSub = storeSettings.subscription;
+          const trialEndIso = serverSub.trialEndsAt ? (serverSub.trialEndsAt.toDate ? serverSub.trialEndsAt.toDate().toISOString() : new Date(serverSub.trialEndsAt).toISOString()) : new Date().toISOString();
+          
+          // Validar si difiere de lo que tenemos guardado localmente
+          if (!currentSub || currentSub.status !== mappedStatus || currentSub.trialEndDate !== trialEndIso) {
+            const updatedSub: Subscription = {
+              isActive: mappedStatus === 'ACTIVE' || mappedStatus === 'TRIAL',
+              plan: (serverSub.plan || 'PRO') as PlanTier,
+              status: mappedStatus as SubscriptionStatus,
+              startDate: serverSub.createdAt ? (serverSub.createdAt.toDate ? serverSub.createdAt.toDate().toISOString() : new Date(serverSub.createdAt).toISOString()) : new Date().toISOString(),
+              trialEndDate: trialEndIso,
+              nextBillingDate: serverSub.nextBillingAt ? (serverSub.nextBillingAt.toDate ? serverSub.nextBillingAt.toDate().toISOString() : new Date(serverSub.nextBillingAt).toISOString()) : trialEndIso
+            };
             
-            // Mapear campos de base de datos a tipos del cliente
-            const isDbActive = serverSub.status === 'active';
-            const mappedStatus = serverSub.status === 'active' ? 'ACTIVE' : (new Date(serverSub.trialEndsAt) < new Date() ? 'EXPIRED' : 'TRIAL');
-            
-            const currentSub = storeSettings.subscription;
-            
-            // Validar si difiere de lo que tenemos guardado localmente
-            if (!currentSub || currentSub.status !== mappedStatus || currentSub.trialEndDate !== serverSub.trialEndsAt) {
-              const updatedSub: Subscription = {
-                isActive: isDbActive || mappedStatus === 'TRIAL',
-                plan: (serverSub.plan || 'PRO') as PlanTier,
-                status: mappedStatus as SubscriptionStatus,
-                startDate: serverSub.createdAt || new Date().toISOString(),
-                trialEndDate: serverSub.trialEndsAt,
-                nextBillingDate: serverSub.nextBillingAt || serverSub.trialEndsAt
-              };
-              
-              const updatedSettings = { ...storeSettings, subscription: updatedSub };
-              setStoreSettings(updatedSettings);
-              dbService.saveStoreSettings(updatedSettings);
-            }
+            const updatedSettings = { ...storeSettings, subscription: updatedSub };
+            setStoreSettings(updatedSettings);
+            dbService.saveStoreSettings(updatedSettings);
           }
         }
       } catch (err) {
-        console.warn("No se pudo sincronizar el estado de la suscripción Wompi:", err);
+        console.warn("No se pudo sincronizar el estado de la suscripción:", err);
       }
     };
     

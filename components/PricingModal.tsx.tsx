@@ -31,50 +31,42 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
     setLoading(true);
     try {
       const token = await auth.currentUser.getIdToken();
-      
-      const response = await fetch('/api/payments/create-subscription', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ plan: 'monthly' })
-      });
-
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.indexOf("application/json") !== -1) {
-          const data = await response.json();
-          
-          if (data.success) {
-            setPublicKey(data.publicKey);
+            const { db } = await import("../firebase");
+            const { doc, setDoc, getDoc, serverTimestamp } = await import("firebase/firestore");
             
-            const trialEnd = data.trialEndsAt || (data.subscription && data.subscription.trialEndsAt);
-            if (trialEnd) {
-                if (typeof trialEnd === 'string') {
-                    setTrialEndsAt(new Date(trialEnd));
-                } else if (trialEnd._seconds) {
-                    setTrialEndsAt(new Date(trialEnd._seconds * 1000));
-                } else {
-                    setTrialEndsAt(new Date());
-                }
+            const subRef = doc(db, "subscriptions", user.uid);
+            const subDoc = await getDoc(subRef);
+            
+            let trialEndObj = new Date();
+            let trialDays = 15;
+            
+            const emailLower = user.email?.toLowerCase();
+            if (emailLower === "info.msdmed@gmail.com" || emailLower === "jorge.orlando.gonzalez@gmail.com" || emailLower === "info.empresasaliat@gmail.com") {
+                trialDays = 365 * 10;
             }
-            setShowConfirmation(true);
-          } else {
-            alert(`Error: ${data.message || 'No se pudo crear la suscripción'}`);
-          }
-      } else {
-          console.warn("Respuesta no JSON recibida, posible cold start:", await response.text());
-          alert('El servidor se está despertando. Por favor, espera unos segundos e intenta nuevamente.');
-      }
-    } catch (error: any) {
-      console.error('Error:', error);
-      alert('Error de conexión. Es posible que el servidor esté despertando, intenta de nuevo.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleConfirmTrial = () => {
+            trialEndObj.setDate(trialEndObj.getDate() + trialDays);
+            
+            if (!subDoc.exists()) {
+                await setDoc(subRef, {
+                    userId: user.uid,
+                    userEmail: user.email,
+                    status: "trial",
+                    plan: "monthly",
+                    amount: 39900,
+                    currency: "COP",
+                    createdAt: serverTimestamp(),
+                    trialEndsAt: trialEndObj
+                });
+            }
+            const data = { success: true };
+            if (data.success) {
+                let formattedDate = trialEndObj.toLocaleDateString();
+                alert(`¡Espectacular, socio! Tu Prueba Gratis de 15 Días ha sido activada con éxito. Trial válido hasta: ${formattedDate}`);
+                onSelectPlan("PRO", true);
+            }
+        } catch (error) {
+            console.error("Error al iniciar trial:", error);
+            alert("Error de red al activar el periodo de prueba gratis.");
     // Aquí integrarías el widget de Wompi cuando tengas las API keys
     // Por ahora, solo cerramos el modal
     alert(`✅ ¡Bienvenido! Tu prueba gratuita está activa hasta el ${trialEndsAt?.toLocaleDateString('es-CO')}`);

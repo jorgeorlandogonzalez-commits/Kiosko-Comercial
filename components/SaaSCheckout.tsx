@@ -79,19 +79,54 @@ const SaaSCheckout: React.FC<SaaSCheckoutProps> = ({ isOpen, onClose, userId, us
       }
     });
 
-    checkout.open(function (result: any) {
+    checkout.open(async function (result: any) {
       const transaction = result.transaction;
       setIsProcessing(false);
       
       if (transaction.status === 'APPROVED') {
-        alert("¡Pago aprobado! Estamos procesando tu suscripción. El sistema se actualizará en unos minutos.");
-        onClose();
+        alert("¡Pago aprobado! Validando transacción...");
+        
+        try {
+          const { getAuth } = await import('firebase/auth');
+          const token = await getAuth().currentUser?.getIdToken();
+          
+          const verifyRes = await fetch('/api/payments/verify', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ transactionId: transaction.id })
+          });
+          
+          const verifyData = await verifyRes.json();
+          if (verifyData.success) {
+            // Update Firestore directly
+            const { db } = await import('../firebase');
+            const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+            
+            await updateDoc(doc(db, 'subscriptions', userId), {
+              status: 'active',
+              signature: verifyData.signature,
+              transactionId: transaction.id,
+              paidAt: serverTimestamp(),
+              nextBillingAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            });
+            
+            alert("¡Suscripción activada exitosamente!");
+            onClose();
+          } else {
+            alert("Error validando el pago: " + (verifyData.message || "Desconocido"));
+          }
+        } catch (error) {
+          console.error("Error validando pago:", error);
+          alert("Ocurrió un error validando tu pago. Por favor contacta soporte.");
+        }
       } else if (transaction.status === 'DECLINED') {
         alert("El pago fue rechazado. Por favor intenta con otro medio de pago.");
       } else if (transaction.status === 'ERROR') {
         alert("Ocurrió un error con el pago. Intenta más tarde.");
       } else {
-        // PENDING o similar
         alert("Tu pago está en estado pendiente. Si fue debitado, tu cuenta se activará automáticamente al confirmarse.");
         onClose();
       }
