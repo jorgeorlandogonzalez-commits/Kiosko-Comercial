@@ -49,7 +49,7 @@ const SaaSCheckout: React.FC<SaaSCheckoutProps> = ({ isOpen, onClose, userId, us
     };
   }, [isOpen]);
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     if (!isScriptLoaded || !window.WidgetCheckout) {
       alert("La pasarela de pago aún está cargando. Por favor, intenta de nuevo en unos segundos.");
       return;
@@ -57,11 +57,21 @@ const SaaSCheckout: React.FC<SaaSCheckoutProps> = ({ isOpen, onClose, userId, us
 
     setIsProcessing(true);
 
-    const publicKey = ((import.meta as any).env).VITE_WOMPI_PUBLIC_KEY;
+    let publicKey = ((import.meta as any).env).VITE_WOMPI_PUBLIC_KEY;
     if (!publicKey) {
-      alert("Error de configuración: Falta VITE_WOMPI_PUBLIC_KEY para conectarse a la pasarela de pagos.");
-      setIsProcessing(false);
-      return;
+      try {
+        const res = await fetch('/api/config/wompi');
+        const data = await res.json();
+        if (data.success && data.publicKey) {
+          publicKey = data.publicKey;
+        } else {
+          throw new Error("No public key from server");
+        }
+      } catch (err) {
+        alert("Error de configuración: Falta VITE_WOMPI_PUBLIC_KEY para conectarse a la pasarela de pagos.");
+        setIsProcessing(false);
+        return;
+      }
     }
 
     // Generar referencia única dinámica basada en el UUID del usuario.

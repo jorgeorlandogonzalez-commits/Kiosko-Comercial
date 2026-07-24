@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import pino from 'pino';
 import crypto from 'crypto';
-import fetch from 'node-fetch'; // O usar axios si está instalado, pero node-fetch es común
 
 const logger = pino({ level: 'info' });
 
@@ -17,8 +16,18 @@ declare global {
 }
 
 // Secretos
-const WOMPI_PRIVATE_KEY = process.env.WOMPI_PRIVATE_KEY;
+const WOMPI_PRIVATE_KEY = process.env.WOMPI_PRIVATE_KEY_PROD || process.env.WOMPI_PRIVATE_KEY;
 const FIRESTORE_SIGNATURE_SECRET = 'KIOSKO_SECURE_PAYMENTS_2026'; 
+
+export const getWompiPublicKey = (req: Request, res: Response) => {
+  const publicKey = process.env.WOMPI_PUBLIC_KEY_PROD || process.env.VITE_WOMPI_PUBLIC_KEY;
+  if (!publicKey) {
+    logger.warn('Wompi public key not found in environment');
+    res.status(500).json({ success: false, message: 'Public key not configured' });
+    return;
+  }
+  res.json({ success: true, publicKey });
+};
 
 export const verifyPaymentHandler = async (req: Request, res: Response) => {
   try {
@@ -62,8 +71,6 @@ export const verifyPaymentHandler = async (req: Request, res: Response) => {
       res.status(400).json({ success: false, message: `Transacción no aprobada (Estado: ${transaction.status})` });
       return;
     }
-
-    // Opcional: Validar que el monto coincida con el plan, pero para Kiosko Comercial V3 podemos asumir que si está APROBADA es válida.
 
     // 3. Generar la firma criptográfica segura para que el frontend autorice la actualización
     const signature = crypto

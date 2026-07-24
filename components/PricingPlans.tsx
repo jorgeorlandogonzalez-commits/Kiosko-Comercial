@@ -52,11 +52,21 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTria
     }
 
     setIsProcessing(true);
-    const publicKey = (import.meta as any).env.VITE_WOMPI_PUBLIC_KEY;
+    let publicKey = (import.meta as any).env.VITE_WOMPI_PUBLIC_KEY;
     if (!publicKey) {
-      alert("Error de configuración: Falta VITE_WOMPI_PUBLIC_KEY para conectarse a la pasarela de pagos.");
-      setIsProcessing(false);
-      return;
+      try {
+        const res = await fetch('/api/config/wompi');
+        const data = await res.json();
+        if (data.success && data.publicKey) {
+          publicKey = data.publicKey;
+        } else {
+          throw new Error("No public key from server");
+        }
+      } catch (err) {
+        alert("Error de configuración: Falta VITE_WOMPI_PUBLIC_KEY para conectarse a la pasarela de pagos.");
+        setIsProcessing(false);
+        return;
+      }
     }
 
     const uniqueReference = `sub_${user.uid}_${Date.now()}`;

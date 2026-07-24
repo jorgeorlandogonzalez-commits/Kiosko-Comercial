@@ -24,7 +24,6 @@ dist-ssr
 *.sw?
 
 # Firebase and Secrets
-firebase-applet-config.json
 .env
 .env.*
 !.env.example
