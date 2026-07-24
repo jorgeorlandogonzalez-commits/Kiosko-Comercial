@@ -9,7 +9,6 @@ interface PricingModalProps {
 
 export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
-  const [publicKey, setPublicKey] = useState('');
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [trialEndsAt, setTrialEndsAt] = useState<Date | null>(null);
 
@@ -27,46 +26,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
       alert('Error: Debes iniciar sesión para continuar');
       return;
     }
-
-    setLoading(true);
-    try {
-      const token = await auth.currentUser.getIdToken();
-            const { db } = await import("../firebase");
-            const { doc, setDoc, getDoc, serverTimestamp } = await import("firebase/firestore");
-            
-            const subRef = doc(db, "subscriptions", user.uid);
-            const subDoc = await getDoc(subRef);
-            
-            let trialEndObj = new Date();
-            let trialDays = 15;
-            
-            const emailLower = user.email?.toLowerCase();
-            if (emailLower === "info.msdmed@gmail.com" || emailLower === "jorge.orlando.gonzalez@gmail.com" || emailLower === "info.empresasaliat@gmail.com") {
-                trialDays = 365 * 10;
-            }
-            trialEndObj.setDate(trialEndObj.getDate() + trialDays);
-            
-            if (!subDoc.exists()) {
-                await setDoc(subRef, {
-                    userId: user.uid,
-                    userEmail: user.email,
-                    status: "trial",
-                    plan: "monthly",
-                    amount: 39900,
-                    currency: "COP",
-                    createdAt: serverTimestamp(),
-                    trialEndsAt: trialEndObj
-                });
-            }
-            const data = { success: true };
-            if (data.success) {
-                let formattedDate = trialEndObj.toLocaleDateString();
-                alert(`¡Espectacular, socio! Tu Prueba Gratis de 15 Días ha sido activada con éxito. Trial válido hasta: ${formattedDate}`);
-                onSelectPlan("PRO", true);
-            }
-        } catch (error) {
-            console.error("Error al iniciar trial:", error);
-            alert("Error de red al activar el periodo de prueba gratis.");
+    
     // Aquí integrarías el widget de Wompi cuando tengas las API keys
     // Por ahora, solo cerramos el modal
     alert(`✅ ¡Bienvenido! Tu prueba gratuita está activa hasta el ${trialEndsAt?.toLocaleDateString('es-CO')}`);
@@ -98,115 +58,104 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
 
             <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
               <div className="flex items-start gap-2">
-                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-bold text-lg text-gray-900 mb-2">⚠️ Importante: Cobro Automático</h3>
-                  <p className="text-gray-700 mb-2">
-                    Al finalizar los 15 días, se te cobrará automáticamente <strong>$39.900 COP/mes</strong>.
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Puedes cancelar en cualquier momento desde Configuración → Suscripción, sin penalizaciones.
-                  </p>
-                </div>
+                <AlertCircle className="w-5 h-5 text-yellow-600 mt-1 flex-shrink-0" />
+                <p className="text-sm text-yellow-800">
+                  <span className="font-bold block mb-1">Transparencia Total:</span>
+                  Autorizas que tras los 15 días de prueba, se te cobrará $39.900 COP / mes. 
+                  Puedes cancelar en cualquier momento desde tu panel.
+                </p>
               </div>
             </div>
-
-            <div className="bg-gray-50 p-4 rounded">
-              <p className="text-sm text-gray-600">
-                <strong>Fecha de inicio del cobro:</strong>{' '}
-                {trialEndsAt?.toLocaleDateString('es-CO', { 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
-              </p>
-            </div>
           </div>
 
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowConfirmation(false)}
-              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-3 rounded-lg transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleConfirmTrial}
-              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition-colors"
-            >
-              Aceptar y Comenzar
-            </button>
-          </div>
-
-          <p className="text-xs text-gray-500 text-center mt-4">
-            Al hacer clic en "Aceptar", autorizas el cobro automático según nuestros{' '}
-            <a href="/terminos" className="text-red-600 underline" target="_blank" rel="noopener noreferrer">
-              Términos y Condiciones
-            </a>.
-          </p>
+          <button 
+            onClick={handleSubscribe}
+            className="w-full bg-brand-red text-white py-4 rounded-xl font-bold text-lg hover:bg-brand-darkRed transition-colors flex items-center justify-center gap-2"
+          >
+            Aceptar y Comenzar Prueba
+          </button>
         </div>
       </div>
     );
   }
 
-  // Modal principal de planes
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-md w-full p-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Elige tu Plan</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-6 h-6" />
-          </button>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl max-w-5xl w-full flex flex-col md:flex-row shadow-2xl relative my-8">
+        <button 
+          onClick={onClose}
+          className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 z-10"
+        >
+          <X className="w-8 h-8" />
+        </button>
+
+        {/* Lado Izquierdo: Beneficios (Premium & Visual) */}
+        <div className="md:w-1/2 bg-gray-50 p-10 md:p-14 rounded-l-3xl border-r border-gray-100 flex flex-col justify-center">
+          <div className="inline-block bg-brand-red/10 text-brand-red font-bold px-4 py-1.5 rounded-full mb-6 w-max">
+            Oferta Especial
+          </div>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-6 leading-tight">
+            Todo el Poder para tu Negocio por <span className="text-brand-red">Menos de $1.400 al Día</span>
+          </h2>
+          
+          <div className="space-y-5">
+            <div className="flex items-start gap-3">
+              <div className="bg-green-100 p-1.5 rounded-full mt-0.5">
+                <Check className="w-4 h-4 text-green-600" />
+              </div>
+              <p className="text-gray-700 text-lg">Facturación Electrónica DIAN Ilimitada</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="bg-green-100 p-1.5 rounded-full mt-0.5">
+                <Check className="w-4 h-4 text-green-600" />
+              </div>
+              <p className="text-gray-700 text-lg">Vende desde Cualquier Celular (Cajeros Ilimitados)</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="bg-green-100 p-1.5 rounded-full mt-0.5">
+                <Check className="w-4 h-4 text-green-600" />
+              </div>
+              <p className="text-gray-700 text-lg">Sincronización en la Nube y Modo Sin Internet</p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="bg-green-100 p-1.5 rounded-full mt-0.5">
+                <Check className="w-4 h-4 text-green-600" />
+              </div>
+              <p className="text-gray-700 text-lg">Soporte Técnico Especializado</p>
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="border-2 border-red-500 rounded-xl p-6 bg-red-50">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-xl font-bold text-gray-900">Plan Mensual</h3>
-                <p className="text-gray-600 text-sm">Facturación electrónica completa</p>
-              </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold text-red-600">$39.900</div>
-                <div className="text-sm text-gray-600">COP/mes</div>
-              </div>
-            </div>
+        {/* Lado Derecho: Precio y Call to Action */}
+        <div className="md:w-1/2 p-10 md:p-14 flex flex-col justify-center items-center text-center">
+          <p className="text-gray-500 font-medium tracking-wide uppercase mb-2">Plan Pro Mensual</p>
+          <div className="flex items-end justify-center gap-1 mb-8">
+            <span className="text-gray-400 text-2xl font-medium mb-2">$</span>
+            <span className="text-6xl font-black text-gray-900 tracking-tighter">39.900</span>
+            <span className="text-gray-500 font-medium mb-2">/mes</span>
+          </div>
 
-            <ul className="space-y-2 mb-6">
-              {[
-                'Facturas ilimitadas',
-                'Soporte WhatsApp <2h',
-                'Modo offline',
-                'Reportes en tiempo real',
-                'Asistente IA Don J'
-              ].map((feature, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                  <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
-
-            <button
-              onClick={handleSubscribe}
-              disabled={loading}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-50"
-            >
-              {loading ? 'Procesando...' : 'Comenzar Prueba Gratis (15 días)'}
-            </button>
-
-            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-xs text-gray-700">
-                <strong>⚠️ Importante:</strong> Después de los 15 días gratuitos, se te cobrará automáticamente $39.900/mes. 
-                Puedes cancelar en cualquier momento.
-              </p>
-            </div>
-
-            <p className="text-xs text-gray-500 text-center mt-3">
-              Sin compromiso. Cancela cuando quieras.
+          <div className="bg-brand-red/5 border border-brand-red/10 rounded-2xl p-6 w-full mb-8">
+            <h3 className="text-brand-red font-bold text-xl mb-2">🎁 15 Días de Prueba Gratis</h3>
+            <p className="text-gray-600 text-sm">
+              Úsalo gratis. Si no te convence, cancela con un clic.
             </p>
           </div>
+
+          <button 
+            onClick={() => {
+              const ends = new Date();
+              ends.setDate(ends.getDate() + 15);
+              setTrialEndsAt(ends);
+              setShowConfirmation(true);
+            }}
+            className="w-full bg-brand-red text-white py-5 rounded-2xl font-bold text-xl shadow-lg shadow-red-500/30 hover:bg-brand-darkRed hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+          >
+            Empezar Prueba Gratis
+          </button>
+          <p className="text-gray-400 text-xs mt-4">
+            Al continuar aceptas nuestros términos y condiciones.
+          </p>
         </div>
       </div>
     </div>

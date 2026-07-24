@@ -57,7 +57,7 @@ const SaaSCheckout: React.FC<SaaSCheckoutProps> = ({ isOpen, onClose, userId, us
 
     setIsProcessing(true);
 
-    const publicKey = import.meta.env.VITE_WOMPI_PUBLIC_KEY;
+    const publicKey = ((import.meta as any).env).VITE_WOMPI_PUBLIC_KEY;
     if (!publicKey) {
       console.warn("Falta VITE_WOMPI_PUBLIC_KEY. Configura las variables de entorno.");
     }

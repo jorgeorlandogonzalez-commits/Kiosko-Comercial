@@ -1,7 +1,6 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
     // ===== 0. Global Safety Net (Deny by Default) =====
     match /{document=**} {
       allow read, write: if false;
@@ -10,7 +9,11 @@ service cloud.firestore {
     // ===== Helpers de Autenticación y Roles =====
     
     function isOwner(userId) { 
-      return request.auth != null && request.auth.uid == userId;
+       return request.auth != null && request.auth.uid == userId;
+    }
+    
+    function isOperator(userId) {
+      return isOwner(userId) || exists(/databases/$(database)/documents/users/$(userId)/operators/$(request.auth.uid));
     }
     
     function isAdmin(userId) {
@@ -21,7 +24,7 @@ service cloud.firestore {
     }
 
     function isValidId(id) { 
-      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+       return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
     }
     
     function incoming() { return request.resource.data; }
@@ -78,7 +81,8 @@ service cloud.firestore {
 
     // ===== Reglas de Suscripción =====
     match /subscriptions/{userId} {
-      allow read: if isOwner(userId);
+      allow read: if isOperator(userId);
+      
       allow create: if isOwner(userId) && 
                     incoming().userId == userId && 
                     incoming().status == 'trial';
@@ -96,29 +100,30 @@ service cloud.firestore {
     // ===== Reglas de Usuario =====
     match /users/{userId} {
       // ✅ CORREGIDO: Permitir que el usuario cree su propio documento al registrarse
-      allow read, create: if isOwner(userId);
+      allow read: if isOperator(userId);
+      allow create: if isOwner(userId);
 
       match /storeSettings/{settingId} {
-        allow read: if isOwner(userId);
+        allow read: if isOperator(userId);
         allow write: if isAdmin(userId) && isValidId(settingId);
       }
 
       match /products/{productId} {
-        allow read: if isOwner(userId);
+        allow read: if isOperator(userId);
         allow create, update: if isAdmin(userId) && isValidId(productId) && 
                               incoming() is map && isValidProduct(incoming());
         allow delete: if isAdmin(userId);
       }
 
       match /invoices/{invoiceId} {
-        allow read: if isOwner(userId);
+        allow read: if isOperator(userId);
         
-        allow create: if isOwner(userId) && 
+        allow create: if isOperator(userId) && 
                       isValidId(invoiceId) && 
                       isValidInvoiceForCreate(incoming()) &&
                       isValidCustomerForFE(incoming());
         
-        allow update: if isOwner(userId) && 
+        allow update: if isOperator(userId) && 
                       isValidInvoice(incoming()) &&
                       existing().dianStatus != 'APPROVED' &&
                       isValidInvoiceTransition(existing(), incoming()) &&
@@ -130,33 +135,33 @@ service cloud.firestore {
       }
 
       match /invoices_queue/{queueId} {
-        allow read, write: if isOwner(userId) && isValidId(queueId);
+        allow read, write: if isOperator(userId) && isValidId(queueId);
       }
       
-      match /quotes/{quoteId} { 
-        allow read: if isOwner(userId);
-        allow write: if isOwner(userId) && isValidId(quoteId); 
+      match /quotes/{quoteId} {
+        allow read: if isOperator(userId);
+        allow write: if isOperator(userId) && isValidId(quoteId); 
       }
       
-      match /expenses/{expenseId} { 
-        allow read: if isOwner(userId);
-        allow write: if isOwner(userId) && isValidId(expenseId); 
+      match /expenses/{expenseId} {
+        allow read: if isOperator(userId);
+        allow write: if isOperator(userId) && isValidId(expenseId); 
       }
       
       match /orders/{orderId} {
-        allow read: if isOwner(userId);
-        allow write: if isOwner(userId) && isValidId(orderId);
+        allow read: if isOperator(userId);
+        allow write: if isOperator(userId) && isValidId(orderId);
       }
 
       match /operators/{operatorId} {
-        allow read: if isOwner(userId);
+        allow read: if isOperator(userId);
         allow create, update: if isAdmin(userId) && 
                               (request.auth.uid != operatorId || incoming().role == existing().role);
         allow delete: if isAdmin(userId) && operatorId != request.auth.uid;
       }
 
       match /data/{documentId} {
-        allow read, write: if isOwner(userId) && isValidId(documentId);
+        allow read, write: if isOperator(userId) && isValidId(documentId);
       }
     }
   }
