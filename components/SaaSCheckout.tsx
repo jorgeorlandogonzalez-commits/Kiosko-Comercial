@@ -59,7 +59,9 @@ const SaaSCheckout: React.FC<SaaSCheckoutProps> = ({ isOpen, onClose, userId, us
 
     const publicKey = ((import.meta as any).env).VITE_WOMPI_PUBLIC_KEY;
     if (!publicKey) {
-      console.warn("Falta VITE_WOMPI_PUBLIC_KEY. Configura las variables de entorno.");
+      alert("Error de configuración: Falta VITE_WOMPI_PUBLIC_KEY para conectarse a la pasarela de pagos.");
+      setIsProcessing(false);
+      return;
     }
 
     // Generar referencia única dinámica basada en el UUID del usuario.
@@ -72,7 +74,7 @@ const SaaSCheckout: React.FC<SaaSCheckoutProps> = ({ isOpen, onClose, userId, us
       currency: 'COP',
       amountInCents: amountInCents,
       reference: uniqueReference,
-      publicKey: publicKey || 'pub_test_XXXXX', // Fallback de seguridad visual (no funcionará sin key real)
+      publicKey: publicKey,
       customerData: {
         email: userEmail,
         fullName: 'Cliente Kiosko', // Opcional

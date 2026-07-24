@@ -9,7 +9,7 @@ import { GoogleGenAI } from "@google/genai";
 import pino from "pino";
 import os from "os";
 import { dianTransmitHandler, verifyFirebaseToken } from "./backend/dianBackendHandlers.js";
-import { verifyPaymentHandler, simulatePaymentHandler } from "./backend/paymentsHandler.js";
+import { verifyPaymentHandler } from "./backend/paymentsHandler.js";
 
 // Logger estructurado
 const logger = pino({ level: 'info' });
@@ -89,7 +89,6 @@ app.get("/api/health", (req, res) => {
 
 app.post("/api/dian/transmit", verifyFirebaseToken, dianLimit, dianTransmitHandler);
 app.post("/api/payments/verify", verifyFirebaseToken, verifyPaymentHandler);
-app.post("/api/payments/simulate", verifyFirebaseToken, simulatePaymentHandler);
 
 app.post("/api/gemini/assistant", assistantLimit, async (req, res) => {
   try {

@@ -15,6 +15,7 @@ import { Quotes } from './components/Quotes';
 import { Reports } from './components/Reports';
 import { Expenses } from './components/Expenses';
 import { LoginModal } from './components/LoginModal';
+import { WelcomeModal } from './components/WelcomeModal';
 import { PricingPlans } from './components/PricingPlans'; 
 import { LandingPage } from './components/LandingPage';
 import { HabilitadorPage } from './components/HabilitadorPage';
@@ -39,6 +40,7 @@ function MainApp() {
   const [activeTab, setActiveTab] = useState('pos');
   const [currentUser, setCurrentUser] = useState<Operator | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [currentExternalView, setCurrentExternalView] = useState<'LANDING' | 'HABILITADOR' | 'TERMINOS'>('LANDING');
 
   // Estados SaaS
@@ -1296,11 +1298,22 @@ function MainApp() {
           <LoginModal 
             isOpen={showLoginModal} 
             onClose={() => setShowLoginModal(false)} 
-            onLogin={(user) => {
+            onLogin={(user, isNewUser) => {
               setCurrentUser(user);
               setShowLoginModal(false);
+              if (isNewUser) {
+                setShowWelcomeModal(true);
+              }
             }} 
             canClose={true} 
+          />
+        )}
+        
+        {showWelcomeModal && currentUser && (
+          <WelcomeModal
+            isOpen={showWelcomeModal}
+            onClose={() => setShowWelcomeModal(false)}
+            userName={currentUser.name}
           />
         )}
       </>

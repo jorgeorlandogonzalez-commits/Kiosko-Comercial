@@ -54,7 +54,9 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTria
     setIsProcessing(true);
     const publicKey = (import.meta as any).env.VITE_WOMPI_PUBLIC_KEY;
     if (!publicKey) {
-      console.warn("Falta VITE_WOMPI_PUBLIC_KEY. Usando fallback visual (no funcionará sin key real).");
+      alert("Error de configuración: Falta VITE_WOMPI_PUBLIC_KEY para conectarse a la pasarela de pagos.");
+      setIsProcessing(false);
+      return;
     }
 
     const uniqueReference = `sub_${user.uid}_${Date.now()}`;
@@ -65,7 +67,7 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTria
       currency: 'COP',
       amountInCents: amountInCents,
       reference: uniqueReference,
-      publicKey: publicKey || 'pub_test_XXXXX',
+      publicKey: publicKey,
       customerData: {
         email: user.email,
         fullName: user.displayName || 'Cliente Kiosko',

@@ -11,7 +11,7 @@ import { auth } from '../firebase';
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLogin: (operator: Operator) => void;
+  onLogin: (operator: Operator, isNewUser?: boolean) => void;
   canClose?: boolean;
 }
 
@@ -85,7 +85,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         email: user.email || ''
       };
       
-      onLogin(operator);
+      onLogin(operator, additionalInfo?.isNewUser);
     } catch (err: any) {
       console.error("Error en login con Google:", err);
       setError('Error al iniciar sesión con Google. Intenta de nuevo.');

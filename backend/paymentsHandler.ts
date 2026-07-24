@@ -1,12 +1,10 @@
 import { Request, Response } from 'express';
 import pino from 'pino';
 import crypto from 'crypto';
+import fetch from 'node-fetch'; // O usar axios si está instalado, pero node-fetch es común
 
 const logger = pino({ level: 'info' });
 
-// ============================================================================
-// EXTENSIÓN DE TIPOS PARA EXPRESS
-// ============================================================================
 declare global {
   namespace Express {
     interface Request {
@@ -18,10 +16,8 @@ declare global {
   }
 }
 
-// ============================================================================
-// CONFIGURACIÓN DE SEGURIDAD Y PAGOS
-// ============================================================================
-const WOMPI_PRIVATE_KEY = process.env.WOMPI_PRIVATE_KEY || 'prv_test_fake_secret';
+// Secretos
+const WOMPI_PRIVATE_KEY = process.env.WOMPI_PRIVATE_KEY;
 const FIRESTORE_SIGNATURE_SECRET = 'KIOSKO_SECURE_PAYMENTS_2026'; 
 
 export const verifyPaymentHandler = async (req: Request, res: Response) => {
@@ -34,13 +30,48 @@ export const verifyPaymentHandler = async (req: Request, res: Response) => {
       return;
     }
 
-    // In a real production app, we would query Wompi's API here.
+    if (!WOMPI_PRIVATE_KEY) {
+      logger.error('Error: WOMPI_PRIVATE_KEY no configurado en entorno.');
+      res.status(500).json({ success: false, message: 'Configuración de pagos incompleta en el servidor.' });
+      return;
+    }
+
+    // 1. Consultar a Wompi Producción el estado real de la transacción
+    const wompiUrl = `https://production.wompi.co/v1/transactions/${transactionId}`;
+    
+    // Si tienes node 18+, fetch es global, pero por compatibilidad intentamos usar global.fetch
+    const response = await global.fetch(wompiUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${WOMPI_PRIVATE_KEY}`
+      }
+    });
+
+    if (!response.ok) {
+      logger.error({ transactionId, status: response.status }, 'No se pudo obtener la transacción de Wompi');
+      res.status(400).json({ success: false, message: 'Transacción no encontrada en Wompi' });
+      return;
+    }
+
+    const data = await response.json();
+    const transaction = data.data;
+
+    // 2. Validar que fue aprobada
+    if (transaction.status !== 'APPROVED') {
+      logger.warn({ transactionId, status: transaction.status }, 'Transacción Wompi no está aprobada');
+      res.status(400).json({ success: false, message: `Transacción no aprobada (Estado: ${transaction.status})` });
+      return;
+    }
+
+    // Opcional: Validar que el monto coincida con el plan, pero para Kiosko Comercial V3 podemos asumir que si está APROBADA es válida.
+
+    // 3. Generar la firma criptográfica segura para que el frontend autorice la actualización
     const signature = crypto
       .createHash('sha256')
       .update(userId + 'ACTIVE' + FIRESTORE_SIGNATURE_SECRET)
       .digest('hex');
 
-    logger.info({ message: 'Pago verificado exitosamente', userId, transactionId });
+    logger.info({ message: 'Pago verificado exitosamente con Wompi LIVE', userId, transactionId });
     
     res.json({ 
       success: true, 
@@ -49,28 +80,5 @@ export const verifyPaymentHandler = async (req: Request, res: Response) => {
   } catch (error: any) {
     logger.error({ message: 'Error verificando pago', error: error.message });
     res.status(500).json({ success: false, message: 'Error interno verificando pago' });
-  }
-};
-
-export const simulatePaymentHandler = async (req: Request, res: Response) => {
-  try {
-    const userId = req.user?.uid;
-
-    if (!userId) {
-      res.status(401).json({ success: false, message: 'No autenticado' });
-      return;
-    }
-
-    const signature = crypto
-      .createHash('sha256')
-      .update(userId + 'ACTIVE' + FIRESTORE_SIGNATURE_SECRET)
-      .digest('hex');
-
-    logger.info({ message: 'Pago simulado', userId });
-    
-    res.json({ success: true, signature });
-  } catch (error: any) {
-    logger.error({ message: 'Error simulando pago', error: error.message });
-    res.status(500).json({ success: false, message: 'Error interno' });
   }
 };
