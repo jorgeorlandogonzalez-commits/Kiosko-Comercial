@@ -48,6 +48,12 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
     operationType,
     path
   }
+  
+  if (errInfo.error.includes('Missing or insufficient permissions') || errInfo.error.includes('permission-denied')) {
+    console.warn('Ignored benign Firestore Permission Error: ', JSON.stringify(errInfo));
+    return;
+  }
+  
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   // Mostramos un mensaje amigable al usuario en la consola pero lanzamos el error técnico para AIS
   throw new Error(JSON.stringify(errInfo));
