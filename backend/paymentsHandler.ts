@@ -17,7 +17,29 @@ declare global {
 
 // Secretos
 const WOMPI_PRIVATE_KEY = process.env.WOMPI_PRIVATE_KEY_PROD || process.env.WOMPI_PRIVATE_KEY;
-const FIRESTORE_SIGNATURE_SECRET = 'KIOSKO_SECURE_PAYMENTS_2026'; 
+const FIRESTORE_SIGNATURE_SECRET = 'KIOSKO_SECURE_PAYMENTS_2026';
+
+export const getWompiSignature = (req: Request, res: Response) => {
+  const { reference, amountInCents, currency } = req.body;
+  const eventsSecret = process.env.WOMPI_EVENT_SECRET;
+
+  if (!eventsSecret) {
+    logger.warn('Wompi event secret not found in environment');
+    // Si no hay evento configurado, devolvemos sin firma para no romper entornos locales que no usan validación
+    res.json({ success: true, integrity: null });
+    return;
+  }
+
+  if (!reference || !amountInCents || !currency) {
+    res.status(400).json({ success: false, message: 'Missing parameters' });
+    return;
+  }
+
+  const str = `${reference}${amountInCents}${currency}${eventsSecret}`;
+  const integrity = crypto.createHash('sha256').update(str).digest('hex');
+
+  res.json({ success: true, integrity });
+};
 
 export const getWompiPublicKey = (req: Request, res: Response) => {
   const publicKey = process.env.WOMPI_PUBLIC_KEY_PROD || process.env.VITE_WOMPI_PUBLIC_KEY;

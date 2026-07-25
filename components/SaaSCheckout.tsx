@@ -79,17 +79,45 @@ const SaaSCheckout: React.FC<SaaSCheckoutProps> = ({ isOpen, onClose, userId, us
     const uniqueReference = `sub_${userId}_${Date.now()}`;
     const planAmountCOP = 39900;
     const amountInCents = planAmountCOP * 100;
+    const currency = 'COP';
 
-    const checkout = new window.WidgetCheckout({
-      currency: 'COP',
-      amountInCents: amountInCents,
+    let signature = undefined;
+    try {
+      const { getAuth } = await import('firebase/auth');
+      const token = await getAuth().currentUser?.getIdToken();
+      if (token) {
+        const sigRes = await fetch('/api/payments/signature', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ reference: uniqueReference, amountInCents, currency })
+        });
+        const sigData = await sigRes.json();
+        if (sigData.success && sigData.integrity) {
+          signature = { integrity: sigData.integrity };
+        }
+      }
+    } catch (e) {
+      console.warn("Could not fetch Wompi signature", e);
+    }
+
+    const widgetConfig: any = {
+      currency,
+      amountInCents,
       reference: uniqueReference,
-      publicKey: publicKey,
+      publicKey,
       customerData: {
         email: userEmail,
         fullName: 'Cliente Kiosko', // Opcional
       }
-    });
+    };
+    if (signature) {
+      widgetConfig.signature = signature;
+    }
+
+    const checkout = new window.WidgetCheckout(widgetConfig);
 
     checkout.open(async function (result: any) {
       const transaction = result.transaction;

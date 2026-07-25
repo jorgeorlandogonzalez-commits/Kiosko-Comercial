@@ -72,17 +72,45 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTria
     const uniqueReference = `sub_${user.uid}_${Date.now()}`;
     const planAmountCOP = billingCycle === 'MONTHLY' ? 39900 : 399000;
     const amountInCents = planAmountCOP * 100;
+    const currency = 'COP';
 
-    const checkout = new (window as any).WidgetCheckout({
-      currency: 'COP',
-      amountInCents: amountInCents,
+    let signature = undefined;
+    try {
+      const { getAuth } = await import('firebase/auth');
+      const token = await getAuth().currentUser?.getIdToken();
+      if (token) {
+        const sigRes = await fetch('/api/payments/signature', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ reference: uniqueReference, amountInCents, currency })
+        });
+        const sigData = await sigRes.json();
+        if (sigData.success && sigData.integrity) {
+          signature = { integrity: sigData.integrity };
+        }
+      }
+    } catch (e) {
+      console.warn("Could not fetch Wompi signature", e);
+    }
+
+    const widgetConfig: any = {
+      currency,
+      amountInCents,
       reference: uniqueReference,
-      publicKey: publicKey,
+      publicKey,
       customerData: {
         email: user.email,
         fullName: user.displayName || 'Cliente Kiosko',
       }
-    });
+    };
+    if (signature) {
+      widgetConfig.signature = signature;
+    }
+
+    const checkout = new (window as any).WidgetCheckout(widgetConfig);
 
     checkout.open(async function (result: any) {
       const transaction = result.transaction;
