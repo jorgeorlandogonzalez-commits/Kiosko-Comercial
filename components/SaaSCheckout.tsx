@@ -81,28 +81,6 @@ const SaaSCheckout: React.FC<SaaSCheckoutProps> = ({ isOpen, onClose, userId, us
     const amountInCents = planAmountCOP * 100;
     const currency = 'COP';
 
-    let signature = undefined;
-    try {
-      const { getAuth } = await import('firebase/auth');
-      const token = await getAuth().currentUser?.getIdToken();
-      if (token) {
-        const sigRes = await fetch('/api/payments/signature', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ reference: uniqueReference, amountInCents, currency })
-        });
-        const sigData = await sigRes.json();
-        if (sigData.success && sigData.integrity) {
-          signature = { integrity: sigData.integrity };
-        }
-      }
-    } catch (e) {
-      console.warn("Could not fetch Wompi signature", e);
-    }
-
     const widgetConfig: any = {
       currency,
       amountInCents,
@@ -113,9 +91,6 @@ const SaaSCheckout: React.FC<SaaSCheckoutProps> = ({ isOpen, onClose, userId, us
         fullName: 'Cliente Kiosko', // Opcional
       }
     };
-    if (signature) {
-      widgetConfig.signature = signature;
-    }
 
     const checkout = new window.WidgetCheckout(widgetConfig);
 
@@ -143,15 +118,15 @@ const SaaSCheckout: React.FC<SaaSCheckoutProps> = ({ isOpen, onClose, userId, us
           if (verifyData.success) {
             // Update Firestore directly
             const { db } = await import('../firebase');
-            const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+            const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
             
-            await updateDoc(doc(db, 'subscriptions', userId), {
+            await setDoc(doc(db, 'subscriptions', userId), {
               status: 'active',
               signature: verifyData.signature,
               transactionId: transaction.id,
               paidAt: serverTimestamp(),
               nextBillingAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-            });
+            }, { merge: true });
             
             alert("¡Suscripción activada exitosamente!");
             onClose();
