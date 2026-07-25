@@ -7,7 +7,7 @@ export function GlobalErrorOverlay() {
     const handleWindowError = (event: ErrorEvent) => {
       // Sometimes event.error has the real error object
       let msg = event.message || 'Unknown Error';
-      if (msg === 'Script error.' || msg.includes('Missing or insufficient permissions') || msg.includes('permission-denied')) {
+      if (msg === 'Script error.' || msg.toLowerCase().includes('missing or insufficient permissions') || msg.toLowerCase().includes('permission-denied') || msg.toLowerCase().includes('permission denied')) {
          return; // Ignore cross-origin script error noise
       }
       const details = event.error?.stack ? `\n\n${event.error.stack}` : '';
@@ -33,7 +33,7 @@ export function GlobalErrorOverlay() {
         return;
       }
 
-      if (reason.includes('Missing or insufficient permissions') || reason.includes('permission-denied')) {
+      if (reason.toLowerCase().includes('missing or insufficient permissions') || reason.toLowerCase().includes('permission-denied') || reason.toLowerCase().includes('permission denied')) {
         return;
       }
       setError(`[Unhandled Promise] ${reason}`);
@@ -42,7 +42,7 @@ export function GlobalErrorOverlay() {
     const originalConsoleError = console.error;
     console.error = (...args) => {
       const msg = args.map(a => (typeof a === 'object' ? (a instanceof Error ? a.stack || a.message : JSON.stringify(a)) : String(a))).join(' ');
-      if (msg.includes('Warning:') || msg.includes('WebSocket closed') || msg.includes('vite') || msg.includes('Missing or insufficient permissions') || msg.includes('permission-denied')) {
+      if (msg.includes('Warning:') || msg.includes('WebSocket closed') || msg.includes('vite') || msg.toLowerCase().includes('missing or insufficient permissions') || msg.toLowerCase().includes('permission-denied') || msg.toLowerCase().includes('permission denied')) {
          originalConsoleError(...args);
          return;
       }
