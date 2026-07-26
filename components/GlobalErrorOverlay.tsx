@@ -7,7 +7,8 @@ export function GlobalErrorOverlay() {
     const handleWindowError = (event: ErrorEvent) => {
       // Sometimes event.error has the real error object
       let msg = event.message || 'Unknown Error';
-      if (msg === 'Script error.' || msg.toLowerCase().includes('missing or insufficient permissions') || msg.toLowerCase().includes('permission-denied') || msg.toLowerCase().includes('permission denied')) {
+      let normalizedMsg = msg.toLowerCase().replace(/\s+/g, ' ');
+      if (msg === 'Script error.' || normalizedMsg.includes('missing or insufficient permissions') || normalizedMsg.includes('permission-denied') || normalizedMsg.includes('permission denied')) {
          return; // Ignore cross-origin script error noise
       }
       const details = event.error?.stack ? `\n\n${event.error.stack}` : '';
@@ -33,7 +34,8 @@ export function GlobalErrorOverlay() {
         return;
       }
 
-      if (reason.toLowerCase().includes('missing or insufficient permissions') || reason.toLowerCase().includes('permission-denied') || reason.toLowerCase().includes('permission denied')) {
+      let normalizedReason = reason.toLowerCase().replace(/\s+/g, ' ');
+      if (normalizedReason.includes('missing or insufficient permissions') || normalizedReason.includes('permission-denied') || normalizedReason.includes('permission denied')) {
         return;
       }
       setError(`[Unhandled Promise] ${reason}`);
@@ -42,7 +44,8 @@ export function GlobalErrorOverlay() {
     const originalConsoleError = console.error;
     console.error = (...args) => {
       const msg = args.map(a => (typeof a === 'object' ? (a instanceof Error ? a.stack || a.message : JSON.stringify(a)) : String(a))).join(' ');
-      if (msg.includes('Warning:') || msg.includes('WebSocket closed') || msg.includes('vite') || msg.toLowerCase().includes('missing or insufficient permissions') || msg.toLowerCase().includes('permission-denied') || msg.toLowerCase().includes('permission denied')) {
+      let normalizedMsg = msg.toLowerCase().replace(/\s+/g, ' ');
+      if (msg.includes('Warning:') || msg.includes('WebSocket closed') || msg.includes('vite') || normalizedMsg.includes('missing or insufficient permissions') || normalizedMsg.includes('permission-denied') || normalizedMsg.includes('permission denied')) {
          originalConsoleError(...args);
          return;
       }
