@@ -199,9 +199,13 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTria
     <div className="fixed inset-0 z-[100] bg-gray-50 flex flex-col overflow-y-auto font-sans">
       {/* Header */}
       <div className="bg-brand-black text-white pt-12 pb-24 px-6 text-center relative overflow-hidden shrink-0">
-         {!isTrialExpired && onCancel && (
+         {!isTrialExpired && onCancel ? (
              <button onClick={onCancel} className="absolute top-6 right-6 z-50 bg-white/10 hover:bg-white/20 p-2 rounded-full text-white transition-colors" title="Cerrar">
                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+             </button>
+         ) : (
+             <button onClick={() => auth.signOut()} className="absolute top-6 right-6 z-50 text-[10px] font-black uppercase tracking-widest text-white/50 hover:text-white transition-colors flex items-center gap-2">
+                 Cerrar Sesión
              </button>
          )}
          <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>

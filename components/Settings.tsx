@@ -212,6 +212,15 @@ export const Settings: React.FC<SettingsProps> = ({ settings, onSave, userId, on
                >
                   {isUploadingLogo ? <Loader2 size={12} className="animate-spin" /> : <ImageIcon size={12} />}
                   {formData.logoUrl ? 'Cambiar Logo' : 'Subir Logo'}
+               {formData.logoUrl && (
+                   <button
+                       type="button"
+                       onClick={() => setFormData(prev => ({ ...prev, logoUrl: '' }))}
+                       className="text-[10px] font-black uppercase tracking-widest text-gray-500 bg-gray-100 px-3 py-1 rounded-full hover:bg-gray-200 transition-all flex items-center gap-2"
+                   >
+                       Eliminar
+                   </button>
+               )}
                </button>
                <input 
                   type="file" 
