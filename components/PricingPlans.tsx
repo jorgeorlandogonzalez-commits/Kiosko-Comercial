@@ -70,10 +70,30 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTria
       }
     }
 
-    const uniqueReference = `sub_${user.uid}_${Date.now()}`;
+    const uniqueReference = `sub_${user.uid}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const planAmountCOP = billingCycle === 'MONTHLY' ? 39900 : 399000;
     const amountInCents = planAmountCOP * 100;
     const currency = 'COP';
+
+    // Pedir firma de integridad
+    let signatureIntegrity = null;
+    try {
+      const token = await user.getIdToken();
+      const sigRes = await fetch('/api/payments/signature', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ reference: uniqueReference, amountInCents, currency })
+      });
+      const sigData = await sigRes.json();
+      if (sigData.success && sigData.integrity) {
+        signatureIntegrity = sigData.integrity;
+      }
+    } catch (e) {
+      console.error("Error fetching signature", e);
+    }
 
     const widgetConfig: any = {
       currency,
@@ -85,6 +105,10 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTria
         fullName: user.displayName || 'Cliente Kiosko',
       }
     };
+
+    if (signatureIntegrity) {
+      widgetConfig.signature = { integrity: signatureIntegrity };
+    }
 
     const checkout = new (window as any).WidgetCheckout(widgetConfig);
 
