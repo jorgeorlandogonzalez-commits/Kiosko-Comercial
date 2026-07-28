@@ -153,6 +153,56 @@ function MainApp() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [loadAllData]);
 
+  // VERIFICAR REDIRECT DE WOMPI
+  useEffect(() => {
+    const verifyWompiRedirect = async () => {
+      if (!currentUser?.id) return;
+      const urlParams = new URLSearchParams(window.location.search);
+      const transactionId = urlParams.get('id');
+      const env = urlParams.get('env');
+      
+      if (transactionId) {
+        // Limpiar URL para que no vuelva a verificar si recarga
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        try {
+          const token = await auth.currentUser?.getIdToken();
+          const verifyRes = await fetch('/api/payments/verify', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ transactionId })
+          });
+          
+          const verifyData = await verifyRes.json();
+          if (verifyData.success) {
+            const { db } = await import('./firebase');
+            const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+            
+            await updateDoc(doc(db, 'subscriptions', currentUser.id), {
+              status: 'active',
+              signature: verifyData.signature,
+              transactionId: transactionId,
+              paidAt: serverTimestamp(),
+            });
+            
+            alert("¡Pago validado exitosamente! Bienvenido de nuevo.");
+            setIsSubscriptionExpired(false);
+            setShowPricing(false);
+            checkSubscriptionStatus();
+          } else {
+            alert("Error al validar el pago: " + verifyData.message);
+          }
+        } catch (e) {
+          console.error("Error verificando redirección de pago", e);
+        }
+      }
+    };
+    verifyWompiRedirect();
+  }, [currentUser]);
+
   // VALIDACIÓN DE SUSCRIPCIÓN AL INICIAR
   useEffect(() => {
       if (currentUser) {

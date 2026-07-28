@@ -100,6 +100,7 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTria
       amountInCents,
       reference: uniqueReference,
       publicKey,
+      redirectUrl: window.location.origin,
       customerData: {
         email: user.email,
         fullName: user.displayName || 'Cliente Kiosko',

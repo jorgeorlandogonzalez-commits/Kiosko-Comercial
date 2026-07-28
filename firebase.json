@@ -16,8 +16,8 @@
       {
         "source": "/api/**",
         "run": {
-          "serviceId": "kiosko-backend",
-          "region": "us-central1"
+          "serviceId": "kiosko-comercial",
+          "region": "us-east1"
         }
       },
       {
