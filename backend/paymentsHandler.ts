@@ -21,10 +21,10 @@ const FIRESTORE_SIGNATURE_SECRET = 'KIOSKO_SECURE_PAYMENTS_2026';
 
 export const getWompiSignature = (req: Request, res: Response) => {
   const { reference, amountInCents, currency } = req.body;
-  const eventsSecret = process.env.WOMPI_EVENT_SECRET;
+  const integritySecret = process.env.WOMPI_INTEGRITY_SECRET || process.env.WOMPI_INTEGRITY_SECRET_PROD || process.env.WOMPI_EVENT_SECRET; // Fallback to EVENT_SECRET for legacy
 
-  if (!eventsSecret) {
-    logger.warn('Wompi event secret not found in environment');
+  if (!integritySecret) {
+    logger.warn('Wompi integrity secret not found in environment');
     // Si no hay evento configurado, devolvemos sin firma para no romper entornos locales que no usan validación
     res.json({ success: true, integrity: null });
     return;
@@ -35,7 +35,7 @@ export const getWompiSignature = (req: Request, res: Response) => {
     return;
   }
 
-  const str = `${reference}${amountInCents}${currency}${eventsSecret}`;
+  const str = `${reference}${amountInCents}${currency}${integritySecret}`;
   const integrity = crypto.createHash('sha256').update(str).digest('hex');
 
   res.json({ success: true, integrity });
