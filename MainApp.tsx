@@ -215,9 +215,9 @@ function MainApp() {
     const syncSaaSStatus = async () => {
       if (!currentUser?.id) return;
       
-      // Salta sincronización para superusuarios de prueba
+      // Salta sincronización para superusuarios
       const emailLower = currentUser.email?.toLowerCase();
-      if (emailLower === 'info.msdmed@gmail.com' || emailLower === 'jorge.orlando.gonzalez@gmail.com') return;
+      if (emailLower === 'jorge.orlando.gonzalez@gmail.com') return;
 
       try {
         const { db } = await import('./firebase');
@@ -278,9 +278,9 @@ function MainApp() {
   }, [activeTab, currentUser]);
 
   const checkSubscriptionStatus = () => {
-      // BYPASS DE SUSCRIPCIÓN PARA ADMIN Y DEVELOPER
+      // BYPASS DE SUSCRIPCIÓN PARA ADMIN
       const emailLower = currentUser?.email?.toLowerCase();
-      if (emailLower === 'info.msdmed@gmail.com' || emailLower === 'jorge.orlando.gonzalez@gmail.com') {
+      if (emailLower === 'jorge.orlando.gonzalez@gmail.com') {
           setTrialDaysLeft(999);
           setIsSubscriptionExpired(false);
           setShowPricing(false);
@@ -295,9 +295,17 @@ function MainApp() {
           return;
       }
 
+      const now = new Date();
+
+      if (sub.status === 'EXPIRED') {
+          setTrialDaysLeft(0);
+          setIsSubscriptionExpired(true);
+          setShowPricing(true);
+          return;
+      }
+
       // 2. Si está en Trial, calcular días restantes
       if (sub.status === 'TRIAL') {
-          const now = new Date();
           const end = new Date(sub.trialEndDate);
           const diffTime = end.getTime() - now.getTime();
           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -315,9 +323,31 @@ function MainApp() {
       } 
       // 3. Si está activa (Pagada)
       else if (sub.status === 'ACTIVE') {
-          setTrialDaysLeft(null);
-          setIsSubscriptionExpired(false);
-          setShowPricing(false);
+          if (sub.nextBillingDate) {
+              const nextBill = new Date(sub.nextBillingDate);
+              const diffTime = nextBill.getTime() - now.getTime();
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              
+              if (diffDays <= 0) {
+                  // Suscripción pagada vencida
+                  setTrialDaysLeft(0);
+                  setIsSubscriptionExpired(true);
+                  setShowPricing(true);
+              } else if (diffDays <= 2) {
+                  // Aviso de vencimiento próximo
+                  setTrialDaysLeft(diffDays); // Usamos trialDaysLeft como hack para mostrar el aviso
+                  setIsSubscriptionExpired(false);
+                  setShowPricing(false);
+              } else {
+                  setTrialDaysLeft(null);
+                  setIsSubscriptionExpired(false);
+                  setShowPricing(false);
+              }
+          } else {
+              setTrialDaysLeft(null);
+              setIsSubscriptionExpired(false);
+              setShowPricing(false);
+          }
       }
   };
 
@@ -1379,13 +1409,17 @@ function MainApp() {
 
       <div className="w-full h-full min-h-screen bg-gray-50 flex flex-col transition-all duration-300 ease-in-out relative">
         
-        {/* Banner de Periodo de Prueba SaaS */}
-        {trialDaysLeft !== null && trialDaysLeft <= 15 && (
-            <div className="bg-brand-black text-white px-4 py-2 text-center text-xs font-bold uppercase tracking-widest flex justify-center items-center gap-2 relative z-50 shadow-md">
-                <Clock size={14} className="text-brand-red animate-pulse"/>
-                <span>{trialDaysLeft} Días Restantes de tu Prueba Gratuita</span>
-                <button onClick={() => setShowPricing(true)} className="ml-4 bg-brand-red px-3 py-1 rounded text-[10px] hover:bg-white hover:text-brand-red transition-all">
-                    Suscribirse Ahora
+        {/* Banner de Periodo de Prueba o Suscripción SaaS */}
+        {trialDaysLeft !== null && trialDaysLeft <= 15 && trialDaysLeft > 0 && (
+            <div className={`text-white px-4 py-2 text-center text-xs font-bold uppercase tracking-widest flex justify-center items-center gap-2 relative z-50 shadow-md ${storeSettings.subscription?.status === 'ACTIVE' ? 'bg-orange-600' : 'bg-brand-black'}`}>
+                <Clock size={14} className={storeSettings.subscription?.status === 'ACTIVE' ? "text-white animate-pulse" : "text-brand-red animate-pulse"}/>
+                <span>
+                    {storeSettings.subscription?.status === 'ACTIVE' 
+                        ? `¡Atención! Tu suscripción vence en ${trialDaysLeft} día(s)` 
+                        : `${trialDaysLeft} Días Restantes de tu Prueba Gratuita`}
+                </span>
+                <button onClick={() => setShowPricing(true)} className={`ml-4 px-3 py-1 rounded text-[10px] transition-all ${storeSettings.subscription?.status === 'ACTIVE' ? 'bg-white text-orange-600 hover:bg-gray-100' : 'bg-brand-red text-white hover:bg-white hover:text-brand-red'}`}>
+                    Renovar Ahora
                 </button>
             </div>
         )}

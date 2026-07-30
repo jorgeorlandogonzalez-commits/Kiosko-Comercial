@@ -187,7 +187,7 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTria
             let trialDays = 15;
             
             const emailLower = user.email?.toLowerCase();
-            if (emailLower === "info.msdmed@gmail.com" || emailLower === "jorge.orlando.gonzalez@gmail.com" || emailLower === "info.empresasaliat@gmail.com") {
+            if (emailLower === "jorge.orlando.gonzalez@gmail.com") {
                 trialDays = 365 * 10;
             }
             trialEndObj.setDate(trialEndObj.getDate() + trialDays);
@@ -203,6 +203,16 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTria
                     createdAt: serverTimestamp(),
                     trialEndsAt: trialEndObj
                 });
+            } else {
+                const data = subDoc.data();
+                if (data.trialEndsAt) {
+                    const serverTrialEnds = data.trialEndsAt.toDate ? data.trialEndsAt.toDate() : new Date(data.trialEndsAt);
+                    if (serverTrialEnds < new Date()) {
+                        alert("Socio, tu prueba gratuita ya expiró. Por favor adquiere una licencia para continuar.");
+                        setIsProcessing(false);
+                        return;
+                    }
+                }
             }
             
             let formattedDate = trialEndObj.toLocaleDateString();
