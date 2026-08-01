@@ -1,6 +1,7 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import './index.css';
 import App from './MainApp';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { GlobalErrorOverlay } from './components/GlobalErrorOverlay';

@@ -1,3 +1,13 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-red: #D62828;
+  --color-brand-darkRed: #981111;
+  --color-brand-black: #111111;
+  --color-brand-gray: #F3F4F6;
+  --color-brand-white: #FFFFFF;
+}
+
 body {
   background-color: #F9FAFB;
   color: #111827;
