@@ -61,7 +61,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
                 <AlertCircle className="w-5 h-5 text-yellow-600 mt-1 flex-shrink-0" />
                 <p className="text-sm text-yellow-800">
                   <span className="font-bold block mb-1">Transparencia Total:</span>
-                  Autorizas que tras los 15 días de prueba, se te cobrará $39.900 COP / mes. 
+                  Autorizas que tras los 15 días de prueba, se te cobrará $49.900 COP / mes. 
                   Puedes cancelar en cualquier momento desde tu panel.
                 </p>
               </div>
@@ -131,7 +131,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
           <p className="text-gray-500 font-medium tracking-wide uppercase mb-2">Plan Pro Mensual</p>
           <div className="flex items-end justify-center gap-1 mb-8">
             <span className="text-gray-400 text-2xl font-medium mb-2">$</span>
-            <span className="text-6xl font-black text-gray-900 tracking-tighter">39.900</span>
+            <span className="text-6xl font-black text-gray-900 tracking-tighter">49.900</span>
             <span className="text-gray-500 font-medium mb-2">/mes</span>
           </div>
 

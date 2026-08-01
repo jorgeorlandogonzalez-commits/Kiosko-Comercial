@@ -38,7 +38,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onTermin
             Facturación Electrónica <span className="text-brand-red">Para Tu Negocio.</span> Sin Complicaciones.
           </h1>
           <p className="text-lg text-gray-600 mb-8 max-w-lg leading-relaxed font-medium">
-            El sistema POS más fácil de usar en Colombia. Diseñado para comerciantes reales. Sigue vendiendo incluso sin internet. Desde $39.900 al mes.
+            El sistema POS más fácil de usar en Colombia. Diseñado para comerciantes reales. Sigue vendiendo incluso sin internet. Desde $49.900 al mes.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <button 
@@ -131,7 +131,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onTermin
             <p className="text-[10px] font-black tracking-[0.2em] text-gray-400 uppercase mb-2">Suscripción Mensual</p>
             <div className="flex items-start justify-center gap-1 mb-2">
               <span className="text-xl font-bold text-gray-400 mt-2">$</span>
-              <span className="text-6xl font-black text-brand-black tracking-tighter">39.900</span>
+              <span className="text-6xl font-black text-brand-black tracking-tighter">49.900</span>
             </div>
             <p className="text-sm font-bold text-gray-500 mb-8">Pesos Colombianos / mes</p>
             <button 

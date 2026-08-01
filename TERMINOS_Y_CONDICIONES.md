@@ -43,7 +43,7 @@ Al acceder, registrarse o utilizar la plataforma Kiosko Comercial ("el Servicio"
 
 ## 8. CONDICIONES DE LA BETA Y PAGOS
 8.1. La versión Beta se ofrece con fines de validación y mejora continua. Pueden presentarse actualizaciones frecuentes y cambios funcionales.
-8.2. Precio: $39.900 COP/mes por comercio. Incluye acceso completo, soporte prioritario y actualizaciones.
+8.2. Precio: $49.900 COP/mes por comercio. Incluye acceso completo, soporte prioritario y actualizaciones.
 8.3. Los pagos son recurrentes. La cancelación puede realizarse en cualquier momento desde Configuración → Suscripción, sin penalizaciones.
 
 ## 9. SUSPENSIÓN Y TERMINACIÓN

@@ -77,7 +77,7 @@ export const TerminosPage: React.FC<TerminosPageProps> = ({ onBackToApp }) => {
           <section className="space-y-3">
             <h2 className="text-base font-black text-gray-900 uppercase flex items-center gap-2 border-b pb-2">⚡ 6. Condiciones de la Beta y Suscripción</h2>
             <p>
-              La prueba es totalmente libre de compromisos por 15 días. Posteriormente, el costo de suscripción mensual es de <strong>$39.900 COP</strong> por comercio, sin cláusulas de permanencia. Puedes cancelar el plan o descargar copias de seguridad de tus datos en cualquier momento desde tu panel de ajustes.
+              La prueba es totalmente libre de compromisos por 15 días. Posteriormente, el costo de suscripción mensual es de <strong>$49.900 COP</strong> por comercio, sin cláusulas de permanencia. Puedes cancelar el plan o descargar copias de seguridad de tus datos en cualquier momento desde tu panel de ajustes.
             </p>
           </section>
 

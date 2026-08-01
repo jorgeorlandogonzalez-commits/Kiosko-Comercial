@@ -71,7 +71,7 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTria
     }
 
     const uniqueReference = `sub_${user.uid}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    const planAmountCOP = billingCycle === 'MONTHLY' ? 39900 : 399000;
+    const planAmountCOP = billingCycle === 'MONTHLY' ? 49900 : 499000;
     const amountInCents = planAmountCOP * 100;
     const currency = 'COP';
 
@@ -198,7 +198,7 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTria
                     userEmail: user.email,
                     status: "trial",
                     plan: "monthly",
-                    amount: 39900,
+                    amount: 49900,
                     currency: "COP",
                     createdAt: serverTimestamp(),
                     trialEndsAt: trialEndObj
@@ -309,7 +309,7 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTria
                     <div className="flex items-start justify-center gap-1 leading-none mb-1">
                         <span className="text-xl font-bold text-gray-500 mt-1">$</span>
                         <span className="text-5xl font-black text-white tracking-tighter">
-                            {billingCycle === 'MONTHLY' ? '39.900' : '399.000'}
+                            {billingCycle === 'MONTHLY' ? '49.900' : '499.000'}
                         </span>
                     </div>
                     <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] block">
@@ -317,7 +317,7 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTria
                     </span>
                     {billingCycle === 'YEARLY' && (
                         <div className="mt-2 inline-block bg-green-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase shadow-lg">
-                            ¡Ahorras $79.800!
+                            ¡Ahorras $99.800! (2 Meses Gratis)
                         </div>
                     )}
                   </div>

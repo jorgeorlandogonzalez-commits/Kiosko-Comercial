@@ -177,7 +177,7 @@ const SaaSCheckout: React.FC<SaaSCheckoutProps> = ({ isOpen, onClose, userId, us
           <div className="bg-gray-800 rounded-2xl p-8 text-center border border-gray-700 mb-8 shadow-inner">
             <div className="flex justify-center items-baseline gap-2">
               <span className="text-3xl font-bold text-gray-400">$</span>
-              <span className="text-6xl font-black text-white">39.900</span>
+              <span className="text-6xl font-black text-white">49.900</span>
               <span className="text-xl font-bold text-gray-400 uppercase tracking-widest">/ Mes</span>
             </div>
             <p className="mt-4 text-gray-400 text-lg">Total en Pesos Colombianos (COP). IVA Incluido.</p>

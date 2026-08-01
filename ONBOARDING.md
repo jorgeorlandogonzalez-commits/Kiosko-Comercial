@@ -162,13 +162,13 @@ Abajo a la derecha verás un botón con la cara de **Don J**, tu asistente conta
 
 | Concepto | Detalle |
 |----------|---------|
-| **Precio** | $39.900 COP/mes |
+| **Precio** | $49.900 COP/mes (o $499.000 COP/año, 2 meses gratis) |
 | **Prueba gratuita** | 15 días sin compromiso |
 | **Incluye** | Facturas ilimitadas, soporte WhatsApp, modo offline, Don J, reportes |
 | **Pago** | Tarjeta, PSE, Nequi o Daviplata (vía Wompi) |
 | **Cancelación** | Cuando quieras, sin penalización |
 
-> 💡 **La DIAN no te cobra nada por transmitir facturas.** Tu único costo es la suscripción a Kiosko ($39.900/mes) y la renovación anual de tu certificado .p12 (~$120.000-$190.000/año).
+> 💡 **La DIAN no te cobra nada por transmitir facturas.** Tu único costo es la suscripción a Kiosko ($49.900/mes o $499.000/año) y la renovación anual de tu certificado .p12 (~$120.000-$190.000/año).
 
 ---
 
