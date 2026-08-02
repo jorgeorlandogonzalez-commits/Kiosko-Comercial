@@ -553,6 +553,169 @@ function MainApp() {
       dbService.saveInvoice(updatedInvoice);
   };
 
+  const handleReturnSale = (invoiceId: string) => {
+      const originalInvoice = invoices.find(i => i.id === invoiceId);
+      if (!originalInvoice) return;
+
+      const returnId = `DEV-V-${originalInvoice.id}`;
+      const existingReturn = invoices.find(i => i.id === returnId);
+      if (existingReturn) {
+          alert("Esta factura ya tiene una devolución registrada.");
+          return;
+      }
+
+      let currentProducts = [...products];
+      originalInvoice.items.forEach(oldItem => {
+          const pIndex = currentProducts.findIndex(p => p.id === oldItem.id);
+          if (pIndex !== -1) {
+              currentProducts[pIndex] = {
+                  ...currentProducts[pIndex],
+                  stock: currentProducts[pIndex].stock + oldItem.quantity
+              };
+              
+              const entry: KardexEntry = {
+                  id: `KDX-RET-SALE-${Date.now()}-${oldItem.id}`,
+                  date: getColombiaISO(),
+                  productId: oldItem.id,
+                  productName: oldItem.name,
+                  type: 'ENTRADA',
+                  quantity: oldItem.quantity,
+                  cost: oldItem.cost || 0,
+                  reason: `Devolución Fac ${originalInvoice.id}`,
+                  balance: currentProducts[pIndex].stock
+              };
+              dbService.saveKardexEntry(entry);
+              setKardexEntries(prev => [entry, ...prev]);
+          }
+      });
+      setProducts(currentProducts);
+      dbService.saveProducts(currentProducts);
+
+      const hasCredit = originalInvoice.paymentMethod === PaymentMethod.CREDIT || 
+          (originalInvoice.paymentDetails && originalInvoice.paymentDetails.some(p => p.method === PaymentMethod.CREDIT));
+      if (hasCredit && originalInvoice.customerNit) {
+          const creditAmount = originalInvoice.paymentMethod === PaymentMethod.CREDIT ? originalInvoice.total : 
+              (originalInvoice.paymentDetails?.find(p => p.method === PaymentMethod.CREDIT)?.amount || 0);
+          
+          const existingAcc = creditAccounts.find(a => a.id === originalInvoice.customerNit);
+          if (existingAcc) {
+              const tx: CreditTransaction = {
+                  id: `tx-cxc-ret-${Date.now()}`,
+                  date: getColombiaISO(),
+                  type: 'PAYMENT',
+                  amount: creditAmount,
+                  description: `Devolución Fac ${originalInvoice.id}`
+              };
+              const updated = creditAccounts.map(a => a.id === originalInvoice.customerNit ? {
+                  ...a,
+                  currentDebt: Math.max(0, a.currentDebt - creditAmount),
+                  history: [tx, ...(a.history || [])]
+              } : a);
+              setCreditAccounts(updated);
+              dbService.saveCreditAccounts(updated);
+          }
+      }
+
+      const returnInvoice: Invoice = {
+          ...originalInvoice,
+          id: returnId,
+          date: getColombiaISO(),
+          items: originalInvoice.items.map(item => ({...item, quantity: -item.quantity})),
+          subtotal: -originalInvoice.subtotal,
+          tax: -originalInvoice.tax,
+          total: -originalInvoice.total,
+          dianStatus: 'DRAFT',
+          cufe: undefined
+      };
+      
+      const newInvoices = [returnInvoice, ...invoices];
+      setInvoices(newInvoices);
+      dbService.saveInvoices(newInvoices);
+      alert("Devolución de venta registrada correctamente.");
+  };
+
+  const handleReturnPurchase = (batchId: string) => {
+    const ordersToReturn = orders.filter(o => {
+        const oBatchId = o.batchId || `legacy-${o.id}`;
+        return oBatchId === batchId;
+    });
+    if (ordersToReturn.length === 0) return;
+
+    const firstOrder = ordersToReturn[0];
+    const returnBatchId = `DEV-C-${batchId}`;
+    const existingReturn = orders.find(o => o.batchId === returnBatchId || o.id === returnBatchId);
+    if (existingReturn) {
+        alert("Esta orden de compra ya tiene una devolución registrada.");
+        return;
+    }
+
+    let currentProducts = [...products];
+    let batchTotal = 0;
+    
+    ordersToReturn.forEach(oldItem => {
+        const pIndex = currentProducts.findIndex(p => p.id === oldItem.productId);
+        if (pIndex !== -1) {
+            currentProducts[pIndex] = {
+                ...currentProducts[pIndex],
+                stock: Math.max(0, currentProducts[pIndex].stock - oldItem.quantity)
+            };
+            
+            const entry: KardexEntry = {
+                id: `KDX-RET-PURCH-${Date.now()}-${oldItem.productId}`,
+                date: getColombiaISO(),
+                productId: oldItem.productId,
+                productName: currentProducts[pIndex].name,
+                type: 'SALIDA',
+                quantity: oldItem.quantity,
+                cost: oldItem.cost,
+                reason: `Devolución Compra ${batchId}`,
+                balance: currentProducts[pIndex].stock
+            };
+            dbService.saveKardexEntry(entry);
+            setKardexEntries(prev => [entry, ...prev]);
+        }
+        batchTotal += (oldItem.cost * oldItem.quantity * (1 + oldItem.taxRate/100));
+    });
+    
+    setProducts(currentProducts);
+    dbService.saveProducts(currentProducts);
+
+    const hasCredit = firstOrder.paymentMethod === 'CRÉDITO';
+    const supplierNit = firstOrder.supplierNit;
+    if (hasCredit && supplierNit) {
+        const acc = supplierAccounts.find(a => a.id === supplierNit);
+        if (acc) {
+            const tx: CreditTransaction = {
+                id: `tx-cxp-ret-${Date.now()}`,
+                date: getColombiaISO(),
+                type: 'PAYMENT',
+                amount: batchTotal,
+                description: `Devolución Compra ${batchId}`
+            };
+            const updated = supplierAccounts.map(a => a.id === supplierNit ? {
+                ...a,
+                currentBalance: Math.max(0, a.currentBalance - batchTotal),
+                history: [tx, ...(a.history || [])]
+            } : a);
+            setSupplierAccounts(updated);
+            dbService.saveSupplierAccounts(updated);
+        }
+    }
+
+    const returnOrders: Order[] = ordersToReturn.map(o => ({
+        ...o,
+        id: `DEV-${o.id}`,
+        batchId: returnBatchId,
+        date: getColombiaISO(),
+        quantity: -o.quantity
+    }));
+
+    const newOrders = [...returnOrders, ...orders];
+    setOrders(newOrders);
+    dbService.saveOrders(newOrders);
+    alert("Devolución de compra registrada correctamente.");
+  };
+
   const handleDeleteSaleDocument = (invoiceId: string) => {
       const invoiceToDelete = invoices.find(i => i.id === invoiceId);
       if (!invoiceToDelete) return;
@@ -1240,12 +1403,13 @@ function MainApp() {
     dbService.saveCreditAccounts(updatedAccounts);
   };
 
-  const handleCreditSale = (amount: number, clientName: string, clientNit: string, date: string) => {
+  const handleCreditSale = (amount: number, clientName: string, clientNit: string, date: string, invoiceId?: string) => {
     const existing = creditAccounts.find(a => a.id === clientNit);
+    const desc = invoiceId ? `Factura ${invoiceId}` : 'Venta fiada POS';
     const debt: CreditDebt = {
-      id: `debt-${Date.now()}`,
+      id: invoiceId ? `debt-${invoiceId}` : `debt-${Date.now()}`,
       date: date,
-      description: 'Venta fiada POS',
+      description: desc,
       originalAmount: amount,
       currentBalance: amount,
       isPaid: false
@@ -1255,7 +1419,7 @@ function MainApp() {
       date: date,
       type: 'CHARGE',
       amount: amount,
-      description: 'Venta fiada POS'
+      description: desc
     };
     if (existing) {
       const updated = creditAccounts.map(a => a.id === clientNit ? {
@@ -1438,11 +1602,11 @@ function MainApp() {
               {activeTab === 'inventory' && <Inventory products={products} kardexEntries={kardexEntries} categories={categories} onAddCategory={handleAddCategory} onAddProduct={handleAddProduct} onUpdateProducts={handleUpdateProducts} onDeleteProduct={handleDeleteProduct} onPhysicalCount={handlePhysicalCount} />}
               {activeTab === 'dashboard' && <Dashboard invoices={invoices} products={products} expenses={expenses} totalDebt={creditAccounts.reduce((s,a)=>s+a.currentDebt,0)} cxpTotal={supplierAccounts.reduce((s,a)=>s+a.currentBalance,0)} onRefresh={async () => { loadAllData(); }} />}
               {activeTab === 'invoices' && <DianStatus invoices={invoices} onUpdateInvoice={handleUpdateInvoice} storeSettings={storeSettings} userId={currentUser?.id} />}
-              {activeTab === 'cxc' && <CXC accounts={creditAccounts} onAddPayment={handleAddPaymentCXC} onAddDebt={handleAddDebtCXC} onDeletePayment={handleDeletePaymentCXC} onEditPayment={handleEditPaymentCXC} />}
+              {activeTab === 'cxc' && <CXC accounts={creditAccounts} onAddPayment={handleAddPaymentCXC} onAddDebt={handleAddDebtCXC} onDeletePayment={handleDeletePaymentCXC} onEditPayment={handleEditPaymentCXC} onReturnDebtSale={handleReturnSale} />}
               {activeTab === 'orders' && <Orders products={products} orders={orders} onProcessBatchPurchase={handleProcessBatchPurchase} supplierAccounts={supplierAccounts} onAddSupplierPayment={handleAddSupplierPayment} onDeleteSupplierPayment={handleDeleteSupplierPayment} onEditSupplierPayment={handleEditSupplierPayment} onDeletePurchaseDocument={handleDeletePurchaseDocument} onEditPurchaseDocument={handleEditPurchaseDocument} storeSettings={storeSettings} suppliers={suppliers} onSaveSupplier={handleSaveSupplier} pendingEditBatchId={pendingEditBatchId} onEditLoaded={() => setPendingEditBatchId(null)} />}
               {activeTab === 'quotes' && <Quotes quotes={quotes} onDeleteQuote={handleDeleteQuote} onRestoreQuote={handleRestoreQuote} />}
               {activeTab === 'expenses' && <Expenses expenses={expenses} onAddExpense={handleAddExpense} onDeleteExpense={handleDeleteExpense} onEditExpense={handleEditExpense} storeSettings={storeSettings} />}
-              {activeTab === 'reports' && <Reports invoices={invoices} orders={orders} products={products} storeSettings={storeSettings} expenses={expenses} onNavigate={setActiveTab} onEditPurchase={(batchId) => { setPendingEditBatchId(batchId); setActiveTab('orders'); }} onEditSale={(invoiceId) => { setPendingEditInvoiceId(invoiceId); setActiveTab('pos'); }} onDeletePurchase={handleDeletePurchaseDocument} onDeleteSale={handleDeleteSaleDocument} />}
+              {activeTab === 'reports' && <Reports invoices={invoices} orders={orders} products={products} storeSettings={storeSettings} expenses={expenses} onNavigate={setActiveTab} onEditPurchase={(batchId) => { setPendingEditBatchId(batchId); setActiveTab('orders'); }} onEditSale={(invoiceId) => { setPendingEditInvoiceId(invoiceId); setActiveTab('pos'); }} onDeletePurchase={handleDeletePurchaseDocument} onDeleteSale={handleDeleteSaleDocument} onReturnSale={handleReturnSale} onReturnPurchase={handleReturnPurchase} />}
               {activeTab === 'settings' && <Settings settings={storeSettings} onSave={handleSaveSettings} userId={currentUser?.id} onNavigateActiveTab={setActiveTab} />}
               {activeTab === 'habilitador' && <HabilitadorPage onBackToApp={() => setActiveTab('settings')} />}
               {activeTab === 'terminos' && <TerminosPage onBackToApp={() => setActiveTab('settings')} />}

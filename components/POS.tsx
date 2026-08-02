@@ -21,7 +21,7 @@ interface POSProps {
   onInvoiceCreated: (invoice: Invoice) => void;
   onUpdateInvoice: (invoice: Invoice) => void;
   onQuoteCreated: (quote: Quote) => void;
-  onCreditSale: (amount: number, clientName: string, clientNit: string, date: string) => void;
+  onCreditSale: (amount: number, clientName: string, clientNit: string, date: string, invoiceId?: string) => void;
   onCreditDebtUpdated?: (clientId: string, amount: number) => void;
   onOpenGemini: () => void;
   pendingQuote?: Quote | null;
@@ -73,6 +73,7 @@ export const POS: React.FC<POSProps> = ({
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
+  const [customerBranch, setCustomerBranch] = useState('');
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [sellerName, setSellerName] = useState('');
@@ -316,6 +317,7 @@ export const POS: React.FC<POSProps> = ({
       setCustomerPhone(existing.phone || '');
       setCustomerEmail(existing.email || '');
       setCustomerAddress(existing.address || '');
+      setCustomerBranch(existing.branch || '');
     }
   };
 
@@ -326,7 +328,8 @@ export const POS: React.FC<POSProps> = ({
         name: customerName,
         phone: customerPhone,
         email: customerEmail,
-        address: customerAddress
+        address: customerAddress,
+        branch: customerBranch
       });
     }
   };
@@ -545,7 +548,7 @@ export const POS: React.FC<POSProps> = ({
     const invoice: Invoice = {
       id: invoiceId,
       date: invoiceDate,
-      customerName, customerNit, customerPhone, customerEmail, customerAddress,
+      customerName, customerNit, customerPhone, customerEmail, customerAddress, customerBranch,
       sellerName: sellerName.trim() !== '' ? sellerName : undefined,
       items: [...cart],
       subtotal: cartTotals.subtotalBruto,
@@ -567,11 +570,11 @@ export const POS: React.FC<POSProps> = ({
     }
     
     if (method === PaymentMethod.CREDIT) {
-      onCreditSale(cartTotals.total, customerName, customerNit, invoiceDate);
+      onCreditSale(cartTotals.total, customerName, customerNit, invoiceDate, invoiceId);
     } else if (mixedData) {
       const creditPart = mixedData.find(p => p.method === PaymentMethod.CREDIT);
       if (creditPart) {
-        onCreditSale(creditPart.amount, customerName, customerNit, invoiceDate);
+        onCreditSale(creditPart.amount, customerName, customerNit, invoiceDate, invoiceId);
       }
     }
 
@@ -700,6 +703,7 @@ export const POS: React.FC<POSProps> = ({
         <div class="bold">CLIENTE:</div>
         <div>${lastInvoice.customerName.toUpperCase()}</div>
         <div>NIT/CC: ${lastInvoice.customerNit}</div>
+        ${lastInvoice.customerBranch ? `<div>SUC: ${lastInvoice.customerBranch}</div>` : ''}
         ${lastInvoice.customerPhone ? `<div>TEL: ${lastInvoice.customerPhone}</div>` : ''}
         ${lastInvoice.customerAddress ? `<div>DIR: ${lastInvoice.customerAddress}</div>` : ''}
         ${lastInvoice.customerEmail ? `<div>EMAIL: ${lastInvoice.customerEmail}</div>` : ''}
@@ -789,6 +793,7 @@ export const POS: React.FC<POSProps> = ({
             <strong style="text-transform:uppercase; font-size:10px; color:#666;">Adquirente / Cliente</strong><br>
             <span style="font-weight:bold; font-size:12px;">${lastInvoice.customerName.toUpperCase()}</span><br>
             NIT/CC: ${lastInvoice.customerNit}<br>
+            ${lastInvoice.customerBranch ? `Sucursal: ${lastInvoice.customerBranch}<br>` : ''}
             ${lastInvoice.customerPhone ? `Tel: ${lastInvoice.customerPhone}<br>` : ''}
             ${lastInvoice.customerAddress ? `Dir: ${lastInvoice.customerAddress}<br>` : ''}
             ${lastInvoice.customerEmail ? `Email: ${lastInvoice.customerEmail}` : ''}
@@ -989,6 +994,7 @@ export const POS: React.FC<POSProps> = ({
       customerPhone, 
       customerEmail, 
       customerAddress,
+      customerBranch,
       items: [...cart], 
       total: cartTotals.total 
     });
@@ -1030,6 +1036,7 @@ export const POS: React.FC<POSProps> = ({
 
     msg += `*CLIENTE:*\n${lastInvoice.customerName.toUpperCase()}\n`;
     msg += `CC/NIT: ${lastInvoice.customerNit}\n`;
+    if (lastInvoice.customerBranch) msg += `Sucursal: ${lastInvoice.customerBranch}\n`;
     if (lastInvoice.customerPhone) msg += `Tel: ${lastInvoice.customerPhone}\n`;
     if (lastInvoice.customerAddress) msg += `Dir: ${lastInvoice.customerAddress}\n`;
     if (lastInvoice.customerEmail) msg += `Email: ${lastInvoice.customerEmail}\n`;
@@ -1621,16 +1628,21 @@ export const POS: React.FC<POSProps> = ({
                       {customers.filter(c => c.nit.includes(customerSearchQuery) || c.name.toLowerCase().includes(customerSearchQuery.toLowerCase())).length > 0 ? (
                         customers.filter(c => c.nit.includes(customerSearchQuery) || c.name.toLowerCase().includes(customerSearchQuery.toLowerCase())).map(c => (
                           <div 
-                            key={c.nit} 
+                            key={`${c.nit}-${c.branch || ''}`} 
                             onMouseDown={(e) => {
                               e.preventDefault();
-                              handleCustomerNitChange(c.nit);
+                              setCustomerNit(c.nit);
+                              setCustomerName(c.name);
+                              setCustomerPhone(c.phone || '');
+                              setCustomerEmail(c.email || '');
+                              setCustomerAddress(c.address || '');
+                              setCustomerBranch(c.branch || '');
                               setCustomerSearchQuery('');
                               setShowCustomerDropdown(false);
                             }}
                             className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0"
                           >
-                            <div className="font-bold text-sm text-gray-800">{c.name}</div>
+                            <div className="font-bold text-sm text-gray-800">{c.name} {c.branch ? `(${c.branch})` : ''}</div>
                             <div className="text-xs text-gray-500">NIT: {c.nit}</div>
                           </div>
                         ))
@@ -1715,6 +1727,19 @@ export const POS: React.FC<POSProps> = ({
                     onChange={e => setCustomerAddress(e.target.value)}
                     className="w-full pl-12 pr-4 py-4 bg-gray-100 rounded-2xl outline-none font-bold uppercase text-sm focus:ring-2 focus:ring-brand-red transition-all placeholder:text-gray-300"
                     placeholder="DIRECCIÓN DE ENTREGA"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-400 uppercase ml-1">Sucursal / Info Extra (Opcional)</label>
+                <div className="relative">
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18}/>
+                  <input 
+                    type="text" 
+                    value={customerBranch}
+                    onChange={e => setCustomerBranch(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-gray-100 rounded-2xl outline-none font-bold uppercase text-sm focus:ring-2 focus:ring-brand-red transition-all placeholder:text-gray-300"
+                    placeholder="EJ: SUCURSAL NORTE, SEDE PRINCIPAL..."
                   />
                 </div>
               </div>

@@ -19,6 +19,8 @@ interface ReportsProps {
   onEditSale?: (invoiceId: string) => void;
   onDeletePurchase?: (batchId: string) => void;
   onDeleteSale?: (invoiceId: string) => void;
+  onReturnSale?: (invoiceId: string) => void;
+  onReturnPurchase?: (batchId: string) => void;
 }
 
 type ReportType = 'VENTAS' | 'COMPRAS' | 'INVENTARIO';
@@ -37,7 +39,7 @@ const dateReportInputClass = "bg-transparent text-xs font-bold outline-none curs
   "[&::-webkit-calendar-picker-indicator]:rounded " +
   "[&::-webkit-calendar-picker-indicator]:cursor-pointer";
 
-export const Reports: React.FC<ReportsProps> = ({ invoices, orders, products, storeSettings, expenses = [], onNavigate, onEditPurchase, onEditSale, onDeletePurchase, onDeleteSale }) => {
+export const Reports: React.FC<ReportsProps> = ({ invoices, orders, products, storeSettings, expenses = [], onNavigate, onEditPurchase, onEditSale, onDeletePurchase, onDeleteSale, onReturnSale, onReturnPurchase }) => {
   const [activeReport, setActiveReport] = useState<ReportType>('VENTAS');
   const [salesBreakdown, setSalesBreakdown] = useState<SalesBreakdown>('DETAIL');
   
@@ -73,6 +75,15 @@ export const Reports: React.FC<ReportsProps> = ({ invoices, orders, products, st
   };
 
   const handleCreateReturn = (doc: any, type: 'INVOICE' | 'ORDER') => {
+      const isConfirmed = window.confirm(`¿Desea registrar la devolución de este documento (${doc.id}) en el sistema?\nEsto ajustará el inventario y generará la nota correspondiente.`);
+      if (!isConfirmed) return;
+
+      if (type === 'INVOICE' && onReturnSale) {
+          onReturnSale(doc.id);
+      } else if (type === 'ORDER' && onReturnPurchase) {
+          onReturnPurchase(doc.id);
+      }
+      
       const returnId = type === 'INVOICE' ? `DEV-V-${doc.id}` : `DEV-C-${doc.id}`;
       // Returns should have the current date, not the original document date
       const returnDoc = { 

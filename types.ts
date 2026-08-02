@@ -100,6 +100,7 @@ export interface Customer {
   address?: string;
   phone?: string;
   email?: string;
+  branch?: string;
 }
 
 export interface Supplier {
@@ -125,6 +126,7 @@ export interface Invoice {
   date: string;
   customerName: string;
   customerNit: string;
+  customerBranch?: string;
   customerPhone?: string;
   customerEmail?: string;
   customerAddress?: string;
@@ -149,6 +151,7 @@ export interface Quote {
   date: string;
   customerName: string;
   customerNit: string;
+  customerBranch?: string;
   customerPhone: string;
   customerEmail: string; 
   customerAddress?: string;

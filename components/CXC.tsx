@@ -2,7 +2,7 @@
     import React, { useState, useEffect, useMemo } from 'react';
     import { CreditAccount, CreditDebt, CreditTransaction, StoreSettings } from '../types';
     import { dbService } from '../services/storageService';
-    import { Users, Search, DollarSign, History, ArrowDownLeft, ArrowUpRight, CheckCircle2, Archive, AlertTriangle, ChevronRight, Calendar, Banknote, FileText, TrendingUp, TrendingDown, Filter, X, Printer, FileDown, ArrowLeft, UserCircle, MessageCircle, Edit2, Trash2 } from 'lucide-react';
+    import { Users, Search, DollarSign, History, ArrowDownLeft, ArrowUpRight, CheckCircle2, Archive, AlertTriangle, ChevronRight, Calendar, Banknote, FileText, TrendingUp, TrendingDown, Filter, X, Printer, FileDown, ArrowLeft, UserCircle, MessageCircle, Edit2, Trash2, RotateCcw } from 'lucide-react';
 
     interface CXCProps {
     accounts: CreditAccount[];
@@ -11,9 +11,10 @@
     onDeletePayment?: (clientId: string, transactionId: string) => void;
     onEditPayment?: (clientId: string, transactionId: string, newAmount: number, newDate: string, newDescription: string) => void;
     onCleanupAccounts?: () => void;
+    onReturnDebtSale?: (invoiceId: string) => void;
     }
 
-    export const CXC: React.FC<CXCProps> = ({ accounts, onAddPayment, onAddDebt, onDeletePayment, onEditPayment, onCleanupAccounts }) => {
+    export const CXC: React.FC<CXCProps> = ({ accounts, onAddPayment, onAddDebt, onDeletePayment, onEditPayment, onCleanupAccounts, onReturnDebtSale }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedAccount, setSelectedAccount] = useState<CreditAccount | null>(null);
     const [paymentAmount, setPaymentAmount] = useState('');
@@ -409,9 +410,45 @@
                                     {sortedDebts.length === 0 && debtDateFilter && (
                                         <div className="text-center text-gray-500 py-4">No se encontraron fiados en esta fecha.</div>
                                     )}
-                                    {sortedDebts.map(debt => (
-                                        <div key={debt.id} onClick={() => !debt.isPaid && setTargetDebt(debt)} className={`rounded-2xl p-5 border transition-all relative overflow-hidden shadow-sm ${debt.isPaid ? 'bg-gray-100 border-gray-200 opacity-60' : targetDebt?.id === debt.id ? 'bg-blue-50 border-blue-400 ring-2 ring-blue-100' : 'bg-white border-gray-200'} cursor-pointer`}><div className="flex justify-between items-start mb-4"><div className="flex-1"><div className="font-bold text-gray-800 text-lg mb-1">{debt.description}</div><div className="text-xs text-gray-500 flex items-center gap-1"><Calendar size={12}/> Creado: {new Date(debt.date).toLocaleDateString()} {new Date(debt.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></div>{debt.isPaid ? <span className="bg-green-100 text-green-700 text-xs font-black px-3 py-1 rounded-full uppercase">Pagado</span> : <span className="bg-red-100 text-brand-red text-xs font-black px-3 py-1 rounded-full uppercase">Pendiente</span>}</div><div className="flex justify-between items-end border-t border-gray-100 pt-3"><div><div className="text-xs text-gray-400 uppercase">Original</div><div className="text-gray-600 font-bold">${formatCurrency(debt.originalAmount)}</div></div><div className="text-right"><div className="text-xs text-gray-400 uppercase font-bold">Saldo</div><div className={`text-2xl font-black ${debt.isPaid ? 'text-gray-400' : 'text-gray-900'}`}>${formatCurrency(debt.currentBalance)}</div></div></div></div>
-                                    ))}
+                                    {sortedDebts.map(debt => {
+                                        const isInvoice = debt.id.startsWith('debt-INV');
+                                        const invoiceId = isInvoice ? debt.id.replace('debt-', '') : null;
+                                        return (
+                                        <div key={debt.id} className={`rounded-2xl p-5 border transition-all relative overflow-hidden shadow-sm ${debt.isPaid ? 'bg-gray-100 border-gray-200 opacity-60' : targetDebt?.id === debt.id ? 'bg-blue-50 border-blue-400 ring-2 ring-blue-100' : 'bg-white border-gray-200'}`}>
+                                            <div className="flex justify-between items-start mb-4 cursor-pointer" onClick={() => !debt.isPaid && setTargetDebt(debt)}>
+                                                <div className="flex-1">
+                                                    <div className="font-bold text-gray-800 text-lg mb-1">{debt.description}</div>
+                                                    <div className="text-xs text-gray-500 flex items-center gap-1"><Calendar size={12}/> Creado: {new Date(debt.date).toLocaleDateString()} {new Date(debt.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                                                </div>
+                                                {debt.isPaid ? <span className="bg-green-100 text-green-700 text-xs font-black px-3 py-1 rounded-full uppercase">Pagado</span> : <span className="bg-red-100 text-brand-red text-xs font-black px-3 py-1 rounded-full uppercase">Pendiente</span>}
+                                            </div>
+                                            <div className="flex justify-between items-end border-t border-gray-100 pt-3">
+                                                <div className="flex flex-col gap-2">
+                                                    <div>
+                                                        <div className="text-xs text-gray-400 uppercase">Original</div>
+                                                        <div className="text-gray-600 font-bold">${formatCurrency(debt.originalAmount)}</div>
+                                                    </div>
+                                                    {isInvoice && onReturnDebtSale && (
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const conf = window.confirm(`¿Desea registrar la devolución de la factura ${invoiceId}? Esto ajustará el inventario y abonará a esta deuda automáticamente.`);
+                                                                if(conf && invoiceId) onReturnDebtSale(invoiceId);
+                                                            }}
+                                                            className="text-xs flex items-center gap-1 text-red-500 hover:text-red-700 font-bold py-1 px-2 bg-red-50 hover:bg-red-100 rounded-lg transition-colors w-max"
+                                                        >
+                                                            <RotateCcw size={14} />
+                                                            Devolver Factura
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div className="text-right cursor-pointer" onClick={() => !debt.isPaid && setTargetDebt(debt)}>
+                                                    <div className="text-xs text-gray-400 uppercase font-bold">Saldo</div>
+                                                    <div className={`text-2xl font-black ${debt.isPaid ? 'text-gray-400' : 'text-gray-900'}`}>${formatCurrency(debt.currentBalance)}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )})}
                                 </div>
                             )}
                             {activeTab === 'history' && (

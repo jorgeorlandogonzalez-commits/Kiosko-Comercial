@@ -134,7 +134,7 @@ export const dbService = {
   getCustomers: (): Customer[] => getFromStorage(KEYS.CUSTOMERS, INITIAL_CUSTOMERS),
   saveCustomer: (customer: Customer) => {
     const current = dbService.getCustomers();
-    const index = current.findIndex(c => c.nit === customer.nit);
+    const index = current.findIndex(c => c.nit === customer.nit && (c.branch || '') === (customer.branch || ''));
     const updated = index >= 0 ? [...current] : [...current, customer];
     if (index >= 0) updated[index] = customer;
     saveToStorage(KEYS.CUSTOMERS, updated);
