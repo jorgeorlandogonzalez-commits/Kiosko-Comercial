@@ -144,6 +144,8 @@ export interface Invoice {
   cufe?: string;
   operatorName?: string;
   status?: 'ACTIVE' | 'ANNULLED';
+  isReturn?: boolean;
+  originalId?: string;
 }
 
 export interface Quote {
@@ -180,6 +182,8 @@ export interface Order {
   paymentMethod?: PaymentMethod;
   discount?: number; // Valor del descuento aplicado en pesos
   reference?: string; // Nº de factura / Referencia (Opcional)
+  isReturn?: boolean;
+  originalId?: string;
 }
 
 export interface CreditTransaction {

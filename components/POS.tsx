@@ -385,7 +385,7 @@ export const POS: React.FC<POSProps> = ({
       
       const itemEffectiveGrossWithoutIC = Math.max(0, itemEffectiveGross - itemTotalIC);
       const itemEffectiveBase = itemEffectiveGrossWithoutIC / (1 + (item.taxRate/100));
-      const ivaVal = itemEffectiveBase * (item.taxRate/100);
+      const ivaVal = itemEffectiveGrossWithoutIC - itemEffectiveBase;
 
       subtotalBase += itemEffectiveBase;
       totalTaxIVA += ivaVal;
@@ -408,7 +408,7 @@ export const POS: React.FC<POSProps> = ({
     const totalPagar = subtotalBase + totalTaxIVA + totalTaxIC + shippingCost;
 
     return {
-      subtotalBruto: subtotalBase,
+      subtotalBruto: rawSums.grossTotal,
       discountInPesos,
       shippingCost,
       baseImponible: subtotalBase,
@@ -724,9 +724,10 @@ export const POS: React.FC<POSProps> = ({
           </tbody>
         </table>
         <div class="line"></div>
-        <div class="flex"><span>SUBTOTAL:</span> <span>$${formatMoney(lastInvoice.subtotal)}</span></div>
+        <div class="flex"><span>VALOR BRUTO:</span> <span>$${formatMoney(rawGrossTotal)}</span></div>
         ${lastInvoice.discount ? `<div class="flex"><span>DESCUENTO:</span> <span>-$${formatMoney(lastInvoice.discount)}</span></div>` : ''}
         ${lastInvoice.shippingCost ? `<div class="flex"><span>FLETE:</span> <span>$${formatMoney(lastInvoice.shippingCost)}</span></div>` : ''}
+        <div class="flex"><span>BASE IMPONIBLE:</span> <span>$${formatMoney(lastInvoice.subtotal)}</span></div>
         <div class="flex"><span>IVA:</span> <span>$${formatMoney(lastInvoice.tax)}</span></div>
         ${lastInvoice.consumptionTaxTotal ? `<div class="flex"><span>INC:</span> <span>$${formatMoney(lastInvoice.consumptionTaxTotal)}</span></div>` : ''}
         <div class="flex bold" style="font-size:13px; margin-top:5px;"><span>TOTAL:</span> <span>$${formatMoney(lastInvoice.total)}</span></div>
@@ -861,10 +862,10 @@ export const POS: React.FC<POSProps> = ({
             </p>
           </div>
           <div class="totals-box">
-            <div class="total-row"><span>Subtotal Bruto:</span> <span>$${formatMoney(lastInvoice.subtotal + (lastInvoice.discount || 0))}</span></div>
+            <div class="total-row"><span>Valor Bruto (Sin Dto):</span> <span>$${formatMoney(rawGrossTotal)}</span></div>
             ${lastInvoice.discount ? `<div class="total-row" style="color:red;"><span>Descuentos:</span> <span>-$${formatMoney(lastInvoice.discount)}</span></div>` : ''}
             ${lastInvoice.shippingCost ? `<div class="total-row"><span>Flete:</span> <span>$${formatMoney(lastInvoice.shippingCost)}</span></div>` : ''}
-            <div class="total-row"><span>Subtotal Neto:</span> <span>$${formatMoney(lastInvoice.subtotal)}</span></div>
+            <div class="total-row"><span>Base Gravable:</span> <span>$${formatMoney(lastInvoice.subtotal)}</span></div>
             <div class="total-row"><span>Total IVA:</span> <span>$${formatMoney(lastInvoice.tax)}</span></div>
             ${lastInvoice.consumptionTaxTotal ? `<div class="total-row"><span>Impoconsumo:</span> <span>$${formatMoney(lastInvoice.consumptionTaxTotal)}</span></div>` : ''}
             <div class="total-row grand-total"><span>TOTAL A PAGAR:</span> <span>$${formatMoney(lastInvoice.total)}</span></div>
@@ -1048,14 +1049,15 @@ export const POS: React.FC<POSProps> = ({
       msg += `• ${item.quantity}x ${item.name} \n   ${item.ean ? `[${item.ean}] ` : ''}$${formatMoney(item.price)} c/u = $${formatMoney(totalItem)}\n`;
     });
     msg += `--------------------------------\n`;
-
-    msg += `Subtotal: $${formatMoney(lastInvoice.subtotal)}\n`;
+    const rawGrossText = lastInvoice.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    msg += `Valor Bruto: $${formatMoney(rawGrossText)}\n`;
     if (lastInvoice.discount && lastInvoice.discount > 0) {
       msg += `Descuentos: -$${formatMoney(lastInvoice.discount)}\n`;
     }
     if (lastInvoice.shippingCost && lastInvoice.shippingCost > 0) {
       msg += `Flete: $${formatMoney(lastInvoice.shippingCost)}\n`;
     }
+    msg += `Base Gravable: $${formatMoney(lastInvoice.subtotal)}\n`;
     if (lastInvoice.tax > 0) {
       msg += `Total IVA: $${formatMoney(lastInvoice.tax)}\n`;
     }
@@ -1301,6 +1303,18 @@ export const POS: React.FC<POSProps> = ({
 
           <div className="space-y-2">
             <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2"><LayersIcon size={14} className="text-brand-red"/> Resumen Fiscal Detallado</p>
+            
+            <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/10 p-3 space-y-1 mb-2">
+                <div className="flex justify-between text-xs font-mono">
+                    <span className="text-gray-400">VALOR BRUTO:</span>
+                    <span className="text-white">${formatMoney(cartTotals.subtotalBruto)}</span>
+                </div>
+                <div className="flex justify-between text-xs font-mono border-t border-white/5 pt-1 mt-1">
+                    <span className="text-gray-400 font-bold">BASE IMPONIBLE:</span>
+                    <span className="text-brand-red font-bold">${formatMoney(cartTotals.baseImponible)}</span>
+                </div>
+            </div>
+
             <div className="bg-white/5 rounded-2xl overflow-hidden border border-white/10 font-mono">
               <table className="w-full text-[9px] text-left">
                 <thead className="bg-white/10 text-gray-400 font-black uppercase">

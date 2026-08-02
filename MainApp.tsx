@@ -578,10 +578,10 @@ function MainApp() {
                   date: getColombiaISO(),
                   productId: oldItem.id,
                   productName: oldItem.name,
-                  type: 'ENTRADA',
+                  type: 'DEVOLUCION',
                   quantity: oldItem.quantity,
-                  cost: oldItem.cost || 0,
-                  reason: `Devolución Fac ${originalInvoice.id}`,
+                  reference: originalInvoice.id,
+                  note: `Devolución Fac ${originalInvoice.id}`,
                   balance: currentProducts[pIndex].stock
               };
               dbService.saveKardexEntry(entry);
@@ -620,17 +620,19 @@ function MainApp() {
           ...originalInvoice,
           id: returnId,
           date: getColombiaISO(),
-          items: originalInvoice.items.map(item => ({...item, quantity: -item.quantity})),
-          subtotal: -originalInvoice.subtotal,
-          tax: -originalInvoice.tax,
-          total: -originalInvoice.total,
+          items: originalInvoice.items.map(item => ({...item, quantity: item.quantity})),
+          subtotal: originalInvoice.subtotal,
+          tax: originalInvoice.tax,
+          total: originalInvoice.total,
           dianStatus: 'DRAFT',
-          cufe: undefined
+          cufe: undefined,
+          isReturn: true,
+          originalId: originalInvoice.id
       };
       
       const newInvoices = [returnInvoice, ...invoices];
       setInvoices(newInvoices);
-      dbService.saveInvoices(newInvoices);
+      dbService.saveInvoice(returnInvoice);
       alert("Devolución de venta registrada correctamente.");
   };
 
@@ -665,10 +667,10 @@ function MainApp() {
                 date: getColombiaISO(),
                 productId: oldItem.productId,
                 productName: currentProducts[pIndex].name,
-                type: 'SALIDA',
-                quantity: oldItem.quantity,
-                cost: oldItem.cost,
-                reason: `Devolución Compra ${batchId}`,
+                type: 'DEVOLUCION',
+                quantity: -oldItem.quantity,
+                reference: batchId,
+                note: `Devolución Compra ${batchId}`,
                 balance: currentProducts[pIndex].stock
             };
             dbService.saveKardexEntry(entry);
@@ -680,7 +682,7 @@ function MainApp() {
     setProducts(currentProducts);
     dbService.saveProducts(currentProducts);
 
-    const hasCredit = firstOrder.paymentMethod === 'CRÉDITO';
+    const hasCredit = firstOrder.paymentMethod === PaymentMethod.CXP;
     const supplierNit = firstOrder.supplierNit;
     if (hasCredit && supplierNit) {
         const acc = supplierAccounts.find(a => a.id === supplierNit);
@@ -707,7 +709,9 @@ function MainApp() {
         id: `DEV-${o.id}`,
         batchId: returnBatchId,
         date: getColombiaISO(),
-        quantity: -o.quantity
+        quantity: o.quantity,
+        isReturn: true,
+        originalId: o.id
     }));
 
     const newOrders = [...returnOrders, ...orders];

@@ -129,14 +129,16 @@ export const Reports: React.FC<ReportsProps> = ({ invoices, orders, products, st
             supplierPhone: ord.supplierPhone,
             supplierEmail: ord.supplierEmail,
             status: ord.status,
+            isReturn: ord.isReturn,
             total: 0,
             subtotal: 0,
             items: []
           });
         }
         const group = grouped.get(batchId);
-        const lineTotal = ord.cost * ord.quantity * (1 + ord.taxRate/100);
-        const lineSubtotal = ord.cost * ord.quantity;
+        const factor = ord.isReturn ? -1 : 1;
+        const lineTotal = ord.cost * ord.quantity * (1 + ord.taxRate/100) * factor;
+        const lineSubtotal = ord.cost * ord.quantity * factor;
         group.total += lineTotal;
         group.subtotal += lineSubtotal;
         group.items.push(ord);
@@ -164,13 +166,14 @@ export const Reports: React.FC<ReportsProps> = ({ invoices, orders, products, st
           filteredData.forEach(item => {
               const inv = item as Invoice;
               if (inv.status !== 'ANNULLED') {
-                  totalGross += inv.total;
-                  totalNet += inv.subtotal; // Base imponible
+                  const factor = inv.isReturn ? -1 : 1;
+                  totalGross += (inv.total * factor);
+                  totalNet += (inv.subtotal * factor); // Base imponible
                   // Calcular costo de la factura
                   inv.items.forEach(i => {
-                      totalCost += (i.cost * i.quantity);
+                      totalCost += (i.cost * i.quantity * factor);
                   });
-                  count++;
+                  count += factor;
               }
           });
           
@@ -219,33 +222,35 @@ export const Reports: React.FC<ReportsProps> = ({ invoices, orders, products, st
       const inv = item as Invoice;
       if (inv.status === 'ANNULLED') return;
       
+      const factor = inv.isReturn ? -1 : 1;
+      
       // Por Forma de Pago
       const method = inv.paymentMethod || 'Otros';
       if (!byPayment[method]) byPayment[method] = { total: 0, count: 0 };
-      byPayment[method].total += inv.total;
-      byPayment[method].count += 1;
+      byPayment[method].total += (inv.total * factor);
+      byPayment[method].count += factor;
 
       // Por Cliente
       const nit = inv.customerNit;
       if (!byCustomer[nit]) byCustomer[nit] = { name: inv.customerName, total: 0, count: 0 };
-      byCustomer[nit].total += inv.total;
-      byCustomer[nit].count += 1;
+      byCustomer[nit].total += (inv.total * factor);
+      byCustomer[nit].count += factor;
 
       // Por Vendedor (NUEVO)
       const seller = inv.sellerName || 'Tienda / Sin Asignar';
       if (!bySeller[seller]) bySeller[seller] = { name: seller, count: 0, subtotal: 0, tax: 0, consumptionTax: 0, total: 0 };
-      bySeller[seller].count += 1;
-      bySeller[seller].subtotal += inv.subtotal;
-      bySeller[seller].tax += inv.tax;
-      bySeller[seller].consumptionTax += (inv.consumptionTaxTotal || 0);
-      bySeller[seller].total += inv.total;
+      bySeller[seller].count += factor;
+      bySeller[seller].subtotal += (inv.subtotal * factor);
+      bySeller[seller].tax += (inv.tax * factor);
+      bySeller[seller].consumptionTax += ((inv.consumptionTaxTotal || 0) * factor);
+      bySeller[seller].total += (inv.total * factor);
 
       // Por Producto
       inv.items.forEach(cartItem => {
         const pid = cartItem.id;
         if (!byProduct[pid]) byProduct[pid] = { name: cartItem.name, total: 0, quantity: 0 };
-        byProduct[pid].total += cartItem.price * cartItem.quantity;
-        byProduct[pid].quantity += cartItem.quantity;
+        byProduct[pid].total += (cartItem.price * cartItem.quantity * factor);
+        byProduct[pid].quantity += (cartItem.quantity * factor);
       });
     });
 
@@ -328,18 +333,20 @@ export const Reports: React.FC<ReportsProps> = ({ invoices, orders, products, st
       
       if (isInvoice) {
           const rawItemsSubtotal = doc.items.reduce((acc: number, item: any) => {
-             const baseUnit = (item.price - (item.consumptionTax || 0)) / (1 + (item.taxRate/100));
-             return acc + (baseUnit * item.quantity);
+             const itemGross = item.price * item.quantity;
+             const itemGrossNoIC = itemGross - ((item.consumptionTax || 0) * item.quantity);
+             return acc + itemGrossNoIC;
           }, 0);
           const discountRatio = doc.discount ? doc.discount / (rawItemsSubtotal || 1) : 0;
 
           doc.items.forEach((item: any) => {
               const icUnit = Number(item.consumptionTax || 0);
-              const baseUnit = (item.price - icUnit) / (1 + (item.taxRate/100));
-              const itemBaseTotal = baseUnit * item.quantity;
-              const effectiveBase = itemBaseTotal - (itemBaseTotal * discountRatio);
-              const ivaTotal = effectiveBase * (item.taxRate/100);
               const icTotal = icUnit * item.quantity;
+              const itemGross = item.price * item.quantity;
+              const itemGrossNoIC = Math.max(0, itemGross - icTotal);
+              const effectiveGrossNoIC = itemGrossNoIC - (itemGrossNoIC * discountRatio);
+              const effectiveBase = effectiveGrossNoIC / (1 + (item.taxRate/100));
+              const ivaTotal = effectiveGrossNoIC - effectiveBase;
 
               const ivaKey = `IVA ${item.taxRate}%`;
               if (!fiscalSummary[ivaKey]) fiscalSummary[ivaKey] = { base: 0, iva: 0, ic: 0 };
@@ -378,6 +385,7 @@ export const Reports: React.FC<ReportsProps> = ({ invoices, orders, products, st
           ? (isInvoice ? 'NOTA DE DEVOLUCIÓN (VENTA)' : 'NOTA DE DEVOLUCIÓN (COMPRA)')
           : (isInvoice ? (doc.cufe ? 'FACTURA ELECTRÓNICA' : 'TIQUETE POS') : 'ORDEN DE COMPRA');
 
+      const rawGrossTotal = isInvoice ? (doc.items?.reduce((s: number, i: any) => s + (i.price * i.quantity), 0) || doc.subtotal) : doc.subtotal;
       const docTotal = isInvoice ? doc.total : (doc.total !== undefined ? doc.total : (doc.cost * doc.quantity * (1 + doc.taxRate/100)));
       const docSubtotal = isInvoice ? doc.subtotal : (doc.subtotal !== undefined ? doc.subtotal : (doc.cost * doc.quantity));
       const docTax = isInvoice ? doc.tax : (doc.total !== undefined ? (doc.total - doc.subtotal) : (doc.cost * doc.quantity * (doc.taxRate/100)));
@@ -455,9 +463,10 @@ export const Reports: React.FC<ReportsProps> = ({ invoices, orders, products, st
                 </tbody>
             </table>
             <div class="line"></div>
-            <div class="flex"><span>SUBTOTAL:</span> <span>$${formatMoney(docSubtotal)}</span></div>
+            <div class="flex"><span>VALOR BRUTO:</span> <span>$${formatMoney(rawGrossTotal)}</span></div>
             ${isInvoice && doc.discount ? `<div class="flex"><span>DESCUENTO:</span> <span>-$${formatMoney(doc.discount)}</span></div>` : ''}
             ${isInvoice && doc.shippingCost ? `<div class="flex"><span>FLETE:</span> <span>$${formatMoney(doc.shippingCost)}</span></div>` : ''}
+            <div class="flex"><span>BASE IMPONIBLE:</span> <span>$${formatMoney(docSubtotal)}</span></div>
             <div class="flex"><span>IVA:</span> <span>$${formatMoney(docTax)}</span></div>
             ${isInvoice && doc.consumptionTaxTotal ? `<div class="flex"><span>INC:</span> <span>$${formatMoney(doc.consumptionTaxTotal)}</span></div>` : ''}
             <div class="flex bold" style="font-size:13px; margin-top:5px;"><span>TOTAL:</span> <span>$${formatMoney(docTotal)}</span></div>
@@ -589,11 +598,12 @@ export const Reports: React.FC<ReportsProps> = ({ invoices, orders, products, st
 
             <div class="totals-container">
                 <div class="totals-box">
-                    <div class="total-row"><span>Subtotal:</span> <span>$${formatMoney(docSubtotal)}</span></div>
-                    ${isInvoice && doc.discount ? `<div class="total-row"><span>Descuento:</span> <span>-$${formatMoney(doc.discount)}</span></div>` : ''}
+                    <div class="total-row"><span>Valor Bruto (Sin Dto):</span> <span>$${formatMoney(rawGrossTotal)}</span></div>
+                    ${isInvoice && doc.discount ? `<div class="total-row" style="color:red;"><span>Descuento:</span> <span>-$${formatMoney(doc.discount)}</span></div>` : ''}
                     ${isInvoice && doc.shippingCost ? `<div class="total-row"><span>Flete:</span> <span>$${formatMoney(doc.shippingCost)}</span></div>` : ''}
-                    <div class="total-row"><span>Impuestos:</span> <span>$${formatMoney(docTax)}</span></div>
-                    <div class="grand-total total-row"><span>TOTAL:</span> <span>$${formatMoney(docTotal)}</span></div>
+                    <div class="total-row"><span>Base Gravable:</span> <span>$${formatMoney(docSubtotal)}</span></div>
+                    <div class="total-row"><span>Total Impuestos:</span> <span>$${formatMoney(docTax)}</span></div>
+                    <div class="grand-total total-row"><span>TOTAL A PAGAR:</span> <span>$${formatMoney(docTotal)}</span></div>
                 </div>
             </div>
 
@@ -869,11 +879,12 @@ export const Reports: React.FC<ReportsProps> = ({ invoices, orders, products, st
                                 filteredData.map((doc, index) => {
                                     const inv = doc as Invoice;
                                     return (
-                                        <tr key={`${inv.id}-${index}`} className={`hover:bg-gray-50/50 transition-colors ${inv.status === 'ANNULLED' ? 'opacity-50 line-through bg-red-50/20' : ''}`}>
+                                        <tr key={`${inv.id}-${index}`} className={`hover:bg-gray-50/50 transition-colors ${inv.status === 'ANNULLED' ? 'opacity-50 line-through bg-red-50/20' : ''} ${inv.isReturn ? 'bg-orange-50/20' : ''}`}>
                                             <td className="px-6 py-4 font-medium text-gray-500">{new Date(inv.date).toLocaleDateString('es-CO', { timeZone: 'America/Bogota' })}</td>
                                             <td className="px-6 py-4 font-black text-brand-black">
                                                 {inv.id}
                                                 {inv.status === 'ANNULLED' && <span className="ml-2 text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full no-underline inline-block">ANULADA</span>}
+                                                {inv.isReturn && <span className="ml-2 text-[10px] bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full no-underline inline-block">DEVOLUCIÓN</span>}
                                             </td>
                                             <td className="px-6 py-4 font-bold text-blue-600 uppercase text-xs">{inv.sellerName || 'Tienda'}</td>
                                             <td className="px-6 py-4 font-bold text-gray-600 truncate max-w-[150px] uppercase text-xs">{inv.customerName}</td>
@@ -970,11 +981,12 @@ export const Reports: React.FC<ReportsProps> = ({ invoices, orders, products, st
                             filteredData.map(doc => {
                                 const group = doc as any;
                                 return (
-                                    <tr key={group.id} className={`hover:bg-gray-50/50 transition-colors ${group.status === 'ANULADO' ? 'opacity-50 line-through bg-red-50/20' : ''}`}>
+                                    <tr key={group.id} className={`hover:bg-gray-50/50 transition-colors ${group.status === 'ANULADO' ? 'opacity-50 line-through bg-red-50/20' : ''} ${group.isReturn ? 'bg-orange-50/20' : ''}`}>
                                         <td className="px-6 py-4 font-medium text-gray-500">{new Date(group.date).toLocaleDateString('es-CO', { timeZone: 'America/Bogota' })}</td>
                                         <td className="px-6 py-4 font-black text-brand-black">
                                             {group.id}
                                             {group.status === 'ANULADO' && <span className="ml-2 text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full no-underline inline-block">ANULADA</span>}
+                                            {group.isReturn && <span className="ml-2 text-[10px] bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full no-underline inline-block">DEVOLUCIÓN</span>}
                                         </td>
                                         <td className="px-6 py-4 font-bold text-gray-600 uppercase text-xs">{group.supplier}</td>
                                         <td className="px-6 py-4 text-right font-black text-gray-900">${Math.round(group.total).toLocaleString()}</td>
