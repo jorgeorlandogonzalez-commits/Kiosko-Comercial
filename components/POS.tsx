@@ -355,62 +355,62 @@ export const POS: React.FC<POSProps> = ({
 
   const cartTotals = useMemo(() => {
     const rawSums = cart.reduce((acc, item) => {
-      const ivaPerc = item.taxRate / 100;
-      const icUnitValue = Number(item.consumptionTax || 0); 
-      const salePriceWithoutIC = item.price - icUnitValue;
-      const baseUnit = salePriceWithoutIC / (1 + ivaPerc);
-      const ivaUnit = baseUnit * ivaPerc;
-      
+      const grossSubtotal = item.price * item.quantity;
       return { 
-        subtotalBase: acc.subtotalBase + (baseUnit * item.quantity),
-        totalTaxIVA: acc.totalTaxIVA + (ivaUnit * item.quantity),
-        totalTaxIC: acc.totalTaxIC + (icUnitValue * item.quantity),
+        grossTotal: acc.grossTotal + grossSubtotal,
         articles: acc.articles + item.quantity
       };
-    }, { subtotalBase: 0, totalTaxIVA: 0, totalTaxIC: 0, articles: 0 });
+    }, { grossTotal: 0, articles: 0 });
 
     const discountInPesos = isPercentDiscount 
-      ? (rawSums.subtotalBase * (discountValue / 100)) 
+      ? (rawSums.grossTotal * (discountValue / 100)) 
       : discountValue;
 
-    const baseImponible = Math.max(0, rawSums.subtotalBase - discountInPesos);
-    const totalIVA = baseImponible * (rawSums.totalTaxIVA / (rawSums.subtotalBase || 1));
-    const totalPagar = baseImponible + rawSums.totalTaxIVA + rawSums.totalTaxIC + shippingCost;
-
+    let subtotalBase = 0;
+    let totalTaxIVA = 0;
+    let totalTaxIC = 0;
     const taxBreakdown: Record<string, TaxDetail> = {};
+
     cart.forEach(item => {
-      const icUnitValue = Number(item.consumptionTax || 0);
-      const salePriceWithoutIC = item.price - icUnitValue;
-      const baseUnit = salePriceWithoutIC / (1 + (item.taxRate/100));
-      
-      const itemSubtotalBase = baseUnit * item.quantity;
-      const ratio = rawSums.subtotalBase > 0 ? itemSubtotalBase / rawSums.subtotalBase : 0;
+      const grossSubtotal = item.price * item.quantity;
+      const ratio = rawSums.grossTotal > 0 ? grossSubtotal / rawSums.grossTotal : 0;
       const itemDiscount = discountInPesos * ratio;
-      const itemEffectiveBase = Math.max(0, itemSubtotalBase - itemDiscount);
+      const itemEffectiveGross = Math.max(0, grossSubtotal - itemDiscount);
+
+      const icUnitValue = Number(item.consumptionTax || 0);
+      const itemTotalIC = icUnitValue * item.quantity;
+      
+      const itemEffectiveGrossWithoutIC = Math.max(0, itemEffectiveGross - itemTotalIC);
+      const itemEffectiveBase = itemEffectiveGrossWithoutIC / (1 + (item.taxRate/100));
+      const ivaVal = itemEffectiveBase * (item.taxRate/100);
+
+      subtotalBase += itemEffectiveBase;
+      totalTaxIVA += ivaVal;
+      totalTaxIC += itemTotalIC;
 
       const ivaKey = `IVA ${item.taxRate}%`;
       if (!taxBreakdown[ivaKey]) taxBreakdown[ivaKey] = { type: ivaKey, rate: item.taxRate, base: 0, tax: 0, total: 0 };
-      const ivaVal = (itemEffectiveBase * (item.taxRate/100));
       taxBreakdown[ivaKey].base += itemEffectiveBase;
       taxBreakdown[ivaKey].tax += ivaVal;
       taxBreakdown[ivaKey].total += itemEffectiveBase + ivaVal;
 
-      if (icUnitValue > 0) {
+      if (itemTotalIC > 0) {
         const icKey = `IC`;
         if (!taxBreakdown[icKey]) taxBreakdown[icKey] = { type: icKey, rate: 0, base: 0, tax: 0, total: 0 };
-        taxBreakdown[icKey].base = 0; 
-        taxBreakdown[icKey].tax += icUnitValue * item.quantity;
-        taxBreakdown[icKey].total += icUnitValue * item.quantity;
+        taxBreakdown[icKey].tax += itemTotalIC;
+        taxBreakdown[icKey].total += itemTotalIC;
       }
     });
 
+    const totalPagar = subtotalBase + totalTaxIVA + totalTaxIC + shippingCost;
+
     return {
-      subtotalBruto: rawSums.subtotalBase,
+      subtotalBruto: subtotalBase,
       discountInPesos,
       shippingCost,
-      baseImponible,
-      totalTaxIVA: rawSums.totalTaxIVA,
-      totalTaxIC: rawSums.totalTaxIC,
+      baseImponible: subtotalBase,
+      totalTaxIVA,
+      totalTaxIC,
       total: Math.max(0, Math.round(totalPagar)),
       articles: rawSums.articles,
       taxBreakdown: Object.values(taxBreakdown)
@@ -602,19 +602,21 @@ export const POS: React.FC<POSProps> = ({
     if (!lastInvoice) return { cssStyles: '', pageContent: '' };
 
     const fiscalSummary: Record<string, { base: number, iva: number, ic: number }> = {};
-    const rawItemsSubtotal = lastInvoice.items.reduce((acc, item) => {
-      const baseUnit = (item.price - (item.consumptionTax || 0)) / (1 + (item.taxRate/100));
-      return acc + (baseUnit * item.quantity);
+    const rawGrossTotal = lastInvoice.items.reduce((acc, item) => {
+      return acc + (item.price * item.quantity);
     }, 0);
-    const discountRatio = lastInvoice.discount ? lastInvoice.discount / (rawItemsSubtotal || 1) : 0;
+    const discountRatio = lastInvoice.discount ? lastInvoice.discount / (rawGrossTotal || 1) : 0;
 
     lastInvoice.items.forEach(item => {
+      const grossTotal = item.price * item.quantity;
+      const effectiveGross = grossTotal - (grossTotal * discountRatio);
+
       const icUnit = Number(item.consumptionTax || 0);
-      const baseUnit = (item.price - icUnit) / (1 + (item.taxRate/100));
-      const itemBaseTotal = baseUnit * item.quantity;
-      const effectiveBase = itemBaseTotal - (itemBaseTotal * discountRatio);
-      const ivaTotal = effectiveBase * (item.taxRate/100);
       const icTotal = icUnit * item.quantity;
+      
+      const effectiveGrossWithoutIC = Math.max(0, effectiveGross - icTotal);
+      const effectiveBase = effectiveGrossWithoutIC / (1 + (item.taxRate/100));
+      const ivaTotal = effectiveBase * (item.taxRate/100);
 
       const ivaKey = `IVA ${item.taxRate}%`;
       if (!fiscalSummary[ivaKey]) fiscalSummary[ivaKey] = { base: 0, iva: 0, ic: 0 };

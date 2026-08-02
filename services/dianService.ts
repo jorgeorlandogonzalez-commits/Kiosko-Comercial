@@ -143,15 +143,31 @@ function prepareInvoiceForBackend(invoice: Invoice, settings: StoreSettings): an
       email: invoice.customerEmail,
       direccion: invoice.customerAddress
     },
-    items: (invoice.items || []).map((item: CartItem) => ({
-      id: item.id,
-      descripcion: item.name,
-      cantidad: item.quantity || 1,
-      precio_unitario_sin_impuestos: item.price,
-      porcentaje_iva: item.taxRate || 19,
-      valor_total_item: (item.price * (item.quantity || 1)),
-      codigo_producto: item.ean || ''
-    })),
+    items: (() => {
+      const rawGrossTotal = (invoice.items || []).reduce((acc, item) => acc + (item.price * (item.quantity || 1)), 0);
+      const discountRatio = invoice.discount ? invoice.discount / (rawGrossTotal || 1) : 0;
+
+      return (invoice.items || []).map((item: CartItem) => {
+        const grossSubtotal = item.price * (item.quantity || 1);
+        const effectiveGross = grossSubtotal - (grossSubtotal * discountRatio);
+        
+        const icUnit = Number(item.consumptionTax || 0);
+        const icTotal = icUnit * (item.quantity || 1);
+        
+        const effectiveGrossWithoutIC = Math.max(0, effectiveGross - icTotal);
+        const effectiveBaseUnit = (effectiveGrossWithoutIC / (1 + ((item.taxRate || 19)/100))) / (item.quantity || 1);
+
+        return {
+          id: item.id,
+          descripcion: item.name,
+          cantidad: item.quantity || 1,
+          precio_unitario_sin_impuestos: Number(effectiveBaseUnit.toFixed(2)),
+          porcentaje_iva: item.taxRate || 19,
+          valor_total_item: Number((effectiveBaseUnit * (item.quantity || 1)).toFixed(2)),
+          codigo_producto: item.ean || ''
+        };
+      });
+    })(),
     pago: {
       metodo: isContado ? '1' : '2',
       medio: invoice.paymentMethod === 'Efectivo' ? 'Efectivo' : 'Transferencia',
