@@ -20,53 +20,76 @@ const logger = pino({
   } 
 });
 
+const itemSchema = z.object({
+  descripcion: z.string().min(1),
+  cantidad: z.number().positive(),
+  precio_unitario_sin_impuestos: z.number().min(0),
+  porcentaje_iva: z.union([z.literal(0), z.literal(5), z.literal(19)]),
+  valor_total_item: z.number().min(0),
+});
+
+const pagoSchema = z.object({
+  metodo: z.enum(["1", "2"]), // 1 = Contado, 2 = Crédito
+  medio: z.enum(["Efectivo", "Tarjeta", "Transferencia", "Nequi", "Daviplata"]),
+  recibido: z.number().min(0).optional(),
+  cambio: z.number().min(0).optional(),
+  fecha_vencimiento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+});
+
+const notaSchema = z.object({
+  documento_referencia: z.string().min(1),
+  cufe_referencia: z.string().min(1),
+  concepto: z.string().min(1),
+});
+
 // ===== Schema de validación Zod (Estructura mínima UBL 2.1 para DIAN) =====
-export const invoiceSchema = z.object({
-  id: z.string().min(1).max(50),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  total: z.number().min(0).max(1000000000),
-  subtotal: z.number().min(0),
-  total_impuesto_iva: z.number().min(0),
-  dianStatus: z.enum(['DRAFT', 'SENDING', 'APPROVED', 'REJECTED']),
-  
+export const dianPayloadSchema = z.object({
+  factura_id: z.string().min(1).max(50),
+  tipo_documento: z.enum(["91", "92", "93"]).default("91"),
+  fecha_emision: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  hora_emision: z.string().optional(),
   emisor: z.object({
     nit: z.string().min(1).max(20),
     razon_social: z.string().min(1).max(200),
-    regimen_fiscal: z.enum(['Responsable de IVA', 'No responsable de IVA']),
-    codigo_postal: z.string().length(6).optional().default('110111')
+    regimen_fiscal: z.string().optional(),
   }),
-  
   adquirente: z.object({
-    tipo_identificacion: z.enum(['13', '31', '22', '42', '51']),
+    tipo_identificacion: z.enum(["13", "31", "22", "42", "51"]),
     identificacion: z.string().min(1).max(20),
     razon_social_nombre: z.string().min(1).max(200),
-    email: z.string().email().optional(),
-    telefono: z.string().optional(),
-    direccion: z.string().optional()
+    email: z.union([z.string().email(), z.literal("")]).optional(),
   }),
-  
-  items: z.array(z.object({
-    id: z.string().optional(),
-    descripcion: z.string().min(1).max(200),
-    cantidad: z.number().min(1).max(10000),
-    precio_unitario_sin_impuestos: z.number().min(0),
-    porcentaje_iva: z.number().refine(v => [0, 5, 19].includes(v), {
-      message: "IVA debe ser 0%, 5% o 19%"
-    }),
-    valor_total_item: z.number().min(0),
-    codigo_producto: z.string().optional()
-  })).min(1).max(1000),
-  
-  pago: z.object({
-    metodo: z.enum(['1', '2']),
-    medio: z.enum(['Efectivo', 'Tarjeta', 'Transferencia', 'Nequi', 'Daviplata']),
-    recibido: z.number().min(0),
-    cambio: z.number().min(0)
+  items: z.array(itemSchema).min(1),
+  totales: z.object({
+    subtotal_base_imponible: z.number().min(0),
+    total_impuesto_iva: z.number().min(0),
+    total_a_pagar: z.number().min(0),
   }),
-  
-  notas: z.string().max(500).optional(),
-  prefijo: z.string().max(10).default('FC'),
-  resolucion_dian: z.string().optional()
+  pago: pagoSchema,
+  nota: notaSchema.optional(),
+  notas: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if ((data.tipo_documento === "92" || data.tipo_documento === "93") && !data.nota) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["nota"],
+      message: "Las notas crédito/débito (92/93) deben incluir el bloque 'nota' con la factura de referencia.",
+    });
+  }
+  if (data.tipo_documento === "91" && data.nota) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["nota"],
+      message: "Una factura de venta (91) no puede incluir el bloque 'nota'.",
+    });
+  }
+  if (data.pago.metodo === "2" && !data.pago.fecha_vencimiento) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["pago", "fecha_vencimiento"],
+      message: "Las ventas a crédito (método 2) deben incluir fecha_vencimiento.",
+    });
+  }
 });
 
 // ===== Middleware: Verificar Token Firebase (JWT) =====
@@ -102,7 +125,7 @@ export async function verifyFirebaseToken(
 // ===== Generación de CUFE Oficial (SHA-384 per Resolución 042 de 2020) =====
 export function generarCUFEOficial(invoice: any, settings: any, timestamp: string): string {
   const componentes = [
-    `${invoice.prefijo || 'FC'}-${invoice.id.padStart(6, '0')}`,
+    `${invoice.prefijo || 'FC'}-${String(invoice.factura_id || invoice.id).padStart(6, '0')}`,
     invoice.date,
     Math.floor(invoice.total).toString(),
     settings.emisor?.nit || settings.nit,
@@ -175,7 +198,7 @@ function generarXMLUBL21(invoice: any, settings: any, cufe: string): string {
       
       "cbc:CustomizationID": "10",
       "cbc:ProfileID": "DIAN 2.1",
-      "cbc:ID": `${invoice.prefijo || 'FC'}-${invoice.id.padStart(6, '0')}`,
+      "cbc:ID": `${invoice.prefijo || 'FC'}-${String(invoice.factura_id || invoice.id).padStart(6, '0')}`,
       "cbc:UUID": cufe,
       "cbc:IssueDate": invoice.date,
       "cbc:IssueTime": `${new Date().toISOString().substring(11, 19)}-05:00`,
@@ -476,16 +499,16 @@ export const dianTransmitHandler = async (req: express.Request, res: express.Res
     }
 
     logger.info({ 
-      invoiceId: invoice.id, 
+      invoiceId: invoice.factura_id || invoice.id, 
       userId, 
-      total: invoice.total,
+      total: invoice.totales?.total_a_pagar || invoice.total,
       customer: invoice.adquirente?.identificacion 
     }, '🚀 Iniciando proceso de facturación electrónica REAL');
 
-    const validation = invoiceSchema.safeParse(invoice);
+    const validation = dianPayloadSchema.safeParse(invoice);
     if (!validation.success) {
       logger.warn({ 
-        invoiceId: invoice.id, 
+        invoiceId: invoice.factura_id || invoice.id, 
         errors: validation.error.issues.slice(0, 3)
       }, '❌ Payload de factura inválido');
       
@@ -537,17 +560,17 @@ export const dianTransmitHandler = async (req: express.Request, res: express.Res
 
     const timestamp = Date.now().toString();
     const cufe = generarCUFEOficial(invoice, settings, timestamp);
-    logger.info({ invoiceId: invoice.id, cufe: cufe.substring(0, 16) + '...' }, '✅ CUFE generado');
+    logger.info({ invoiceId: invoice.factura_id || invoice.id, cufe: cufe.substring(0, 16) + '...' }, '✅ CUFE generado');
 
     const xmlSinFirma = generarXMLUBL21(invoice, settings, cufe);
-    logger.debug({ invoiceId: invoice.id, xmlLength: xmlSinFirma.length }, '📄 XML UBL 2.1 generado');
+    logger.debug({ invoiceId: invoice.factura_id || invoice.id, xmlLength: xmlSinFirma.length }, '📄 XML UBL 2.1 generado');
 
     let xmlFirmado: string;
     try {
       xmlFirmado = await firmarXMLConP12(xmlSinFirma, p12Buffer, pin);
-      logger.info({ invoiceId: invoice.id }, '🔐 XML firmado digitalmente');
+      logger.info({ invoiceId: invoice.factura_id || invoice.id }, '🔐 XML firmado digitalmente');
     } catch (error: any) {
-      logger.error({ invoiceId: invoice.id, err: error.message }, '❌ Error en firma digital');
+      logger.error({ invoiceId: invoice.factura_id || invoice.id, err: error.message }, '❌ Error en firma digital');
       return res.status(400).json({ 
         success: false, 
         message: "Error al firmar la factura. Verifique que el certificado y su contraseña (PIN) sean correctos." 
@@ -557,14 +580,14 @@ export const dianTransmitHandler = async (req: express.Request, res: express.Res
     const { approved, dianResponse, error: ptError } = await transmitirAProveedorTecnologico(
       xmlFirmado, 
       cufe, 
-      invoice.id
+      invoice.factura_id || invoice.id
     );
 
     const duration = Date.now() - startTime;
     
     if (approved) {
       logger.info({ 
-        invoiceId: invoice.id, 
+        invoiceId: invoice.factura_id || invoice.id, 
         cufe: cufe.substring(0, 16) + '...',
         duration: `${duration}ms`
       }, '🎉 Factura APROBADA por la DIAN');
@@ -588,7 +611,7 @@ export const dianTransmitHandler = async (req: express.Request, res: express.Res
       const userFriendlyReason = getFriendlyRejectionReason(reason);
       
       logger.warn({ 
-        invoiceId: invoice.id, 
+        invoiceId: invoice.factura_id || invoice.id, 
         status: dianResponse?.status,
         reason: reason.substring(0, 200)
       }, `❌ Factura RECHAZADA: ${userFriendlyReason}`);

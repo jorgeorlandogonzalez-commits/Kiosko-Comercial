@@ -100,6 +100,21 @@ app.post("/api/gemini/assistant", assistantLimit, async (req, res) => {
       return;
     }
 
+    // ✅ INYECCIÓN DE FEATURES (V3.1)
+    // El backend es la fuente de verdad: el frontend NUNCA decide si una feature está activa.
+    // Por ahora las notas crédito están DESHABILITADAS globalmente.
+    // Cuando implementemos el sistema de entitlements (plan CRECE/EMPRESA), aquí
+    // consultarás Firestore por uid y pondrás el valor real.
+    const enrichedContext = typeof contextData === 'string' 
+      ? { 
+          informacionNegocio: contextData, 
+          features: { notasCredito: false } 
+        }
+      : {
+          ...contextData,
+          features: { notasCredito: false }
+        };
+
     const ai = getGeminiClient();
     const systemInstruction = `
       IDENTIDAD: Te llamas "Don J". Eres el asistente, contador y mejor amigo del pequeño comerciante colombiano.
@@ -114,7 +129,7 @@ app.post("/api/gemini/assistant", assistantLimit, async (req, res) => {
       - Tu objetivo es que le pierdan el miedo a la DIAN.
 
       CONTEXTO DEL NEGOCIO DEL USUARIO EN ESTE MOMENTO:
-      ${contextData || ''}
+      ${JSON.stringify(enrichedContext)}
     `;
 
     const response = await ai.models.generateContent({
