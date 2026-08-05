@@ -785,8 +785,9 @@ function MainApp() {
   };
 
   const handleProcessBatchPurchase = (supplierData: any, stagedItems: any[], method: PaymentMethod, customDate?: string, invoiceRef?: string) => {
-    // Si hay customDate (YYYY-MM-DD), la forzamos a mediodía para evitar problemas de UTC
-    const now = customDate ? `${customDate}T12:00:00-05:00` : getColombiaISO();
+    // Si hay customDate, preservamos la hora actual real de Colombia
+    const currentTime = getColombiaISO().split('T')[1];
+    const now = customDate ? `${customDate}T${currentTime}` : getColombiaISO();
     const batchId = `BUY-${Date.now()}`;
     let batchTotal = 0;
     
@@ -1017,7 +1018,8 @@ function MainApp() {
     });
 
     // 2. Aplicar los nuevos items
-    const now = newDate ? `${newDate}T12:00:00-05:00` : getColombiaISO();
+    const currentTime = getColombiaISO().split('T')[1];
+    const now = newDate ? `${newDate}T${currentTime}` : getColombiaISO();
     let newBatchTotal = 0;
 
     const newOrders: Order[] = newItems.map((item, idx) => {
