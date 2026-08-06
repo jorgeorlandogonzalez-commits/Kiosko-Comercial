@@ -1,6 +1,6 @@
-# Arquitectura - Kiosko Comercial V3.0 (SaaS)
+# Arquitectura - Kiosko Comercial V3.1 (SaaS)
 
-Este documento describe la arquitectura y los módulos principales de la plataforma Kiosko Comercial V3.0, un sistema de Punto de Venta (POS) y facturación electrónica diseñado para tenderos y comerciantes, bajo un modelo de Software as a Service (SaaS). Ha alcanzado su **Gran Lanzamiento (Go-Live)** y opera bajo una arquitectura **Full-Stack SPA (Single Page Application)** robusta, con un enfoque **Offline-First**.
+Este documento describe la arquitectura y los módulos principales de la plataforma Kiosko Comercial V3.1, un sistema de Punto de Venta (POS) y facturación electrónica diseñado para tenderos y comerciantes, bajo un modelo de Software as a Service (SaaS). Ha alcanzado su **Gran Lanzamiento (Go-Live)** y opera bajo una arquitectura **Full-Stack SPA (Single Page Application)** robusta, con un enfoque **Offline-First**.
 
 ## 1. Stack Tecnológico e Infraestructura Productiva
 
@@ -23,6 +23,7 @@ Este documento describe la arquitectura y los módulos principales de la platafo
 
 ### 2.3 Integración DIAN (Facturación Electrónica)
 * **Backend Handler (`backend/dianBackendHandlers.ts`):** Controlador de Express responsable de construir el XML/UBL y transmitir a la DIAN o Proveedor Tecnológico.
+* **Validación de Payload:** Se implementa validación estricta utilizando esquemas de `zod` (`dianPayloadSchema`) para asegurar la integridad de la estructura de la factura antes del procesamiento.
 * Se encarga de la generación del código de seguridad (CUFE) mediante algoritmos oficiales.
 * El manejo del certificado digital (P12) y su contraseña (`CERTIFICATE_PIN`) ocurre estrictamente del lado del servidor.
 
@@ -34,6 +35,7 @@ Este documento describe la arquitectura y los módulos principales de la platafo
 
 ### 2.5 Asistente de Inteligencia Artificial (Don J - sumercé)
 * Asistente conversacional basado en la API de Gemini (Google), que reside de manera segura en el backend (`server.ts`).
+* **Inyección de Contexto y Features:** El backend inyecta activamente información sobre el negocio y banderas de características habilitadas (features) como `notasCredito`, garantizando que la IA adapte su comportamiento y solo ofrezca funcionalidades según el plan del usuario o disponibilidad del sistema.
 * Funciones (Function Calling) habilitadas para emitir facturas y guiar al usuario mediante lenguaje natural empático, pensado en usuarios mayores.
 * **Seguridad:** Todo el flujo y el uso de `GEMINI_API_KEY` ocurre únicamente mediante variables de ambiente en Cloud Run.
 
