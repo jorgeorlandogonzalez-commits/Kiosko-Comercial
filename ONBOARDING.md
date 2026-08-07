@@ -1,5 +1,4 @@
 # 🛒 Guía de Inicio Rápido - Kiosko Comercial
-
 > **¡Hola, socio!** 👋
 > Gracias por confiar en **Kiosko Comercial**.
 > Esta guía te llevará paso a paso para que en **menos de 10 minutos** estés facturando legalmente y sin complicaciones.
@@ -74,13 +73,11 @@ Las facturas que generes tienen **validez legal real ante la DIAN**. Cada docume
 ## 🚦 Primeros Pasos
 
 ### 🔑 Paso 1: Entrar a tu Sistema
-
 1. Abre Kiosko Comercial en tu computador o tablet: **kioskocomercial.com**
 2. Haz clic en **"Iniciar sesión con Google"** (usa el correo de tu negocio).
 3. ¡Listo! Entrarás al panel principal. ✅
 
 ### 🏪 Paso 2: Configurar los Datos de tu Comercio
-
 1. Ve a **⚙️ Configuración** (en el menú o ícono de tuerca).
 2. Completa:
    - **Nombre del negocio** (como aparece en tu fachada).
@@ -89,27 +86,21 @@ Las facturas que generes tienen **validez legal real ante la DIAN**. Cada docume
 3. Haz clic en **Guardar**. ✅
 
 ### 📜 Paso 3: Subir tu Certificado Digital (.p12)
-
 > 🔑 *Este archivo es tu "firma electrónica". Sin él, el sistema no puede facturar legalmente.*
-
 1. En **Configuración → Certificado Digital**, toca **"Subir archivo .p12"**.
 2. Selecciona el archivo que te entregó la certificadora.
 3. Ingresa la **contraseña (PIN)** del certificado.
 4. Toca **"Validar"**. Si aparece un check verde ✅, tu certificado está listo.
-
 > 🔒 *Nunca compartas este archivo ni tu PIN. Es la llave de tu caja fuerte digital.*
 
 ### 📦 Paso 4: Agregar tus Productos
-
 1. Ve a **📦 Inventario / Productos**.
 2. Toca **"+ Nuevo producto"**.
 3. Escribe: Nombre, Precio de venta, Cantidad en bodega e IVA (19%, 5% o 0%).
 4. Toca **Guardar**. Repite con tus 10 productos más vendidos.
-
 > 💡 *Tip: Si tienes lector de código de barras, escanea el producto en el campo "Código" para vender más rápido.*
 
 ### 💰 Paso 5: Tu Primera Venta Real
-
 1. Ve a **🛒 Caja / Punto de Venta (POS)**.
 2. Agrega productos tocándolos en la lista o escaneándolos.
 3. Revisa el total y toca el botón grande **"💰 Cobrar"**.
@@ -125,7 +116,6 @@ Las facturas que generes tienen **validez legal real ante la DIAN**. Cada docume
 ## 📴 ¿Y si se va el internet? (Tranquilo, sigue vendiendo)
 
 Kiosko está diseñado para trabajar sin conexión:
-
 - **📴 Sin internet:** La venta se guarda en tu equipo. **Sigue cobrando normal**.
 - **📶 Vuelve la red:** Las facturas pendientes se envían solas a la DIAN en segundo plano.
 - **📊 Revisar estado:** Ve a **Estado DIAN** para ver cuáles ya fueron aceptadas.
@@ -173,7 +163,8 @@ Abajo a la derecha verás un botón con la cara de **Don J**, tu asistente conta
 ---
 
 ## 🚧 Limitaciones Conocidas
-- **Usuarios:** Gestión de Multi-usuario y roles avanzados progresivamente habilitados en Plan EMPRESA (V3.2+).
+
+- **Usuarios:** Gestión de Multi-usuario y roles avanzados progresivamente habilitados en Plan EMPRESA (V3.3+).
 - **Notas Crédito / Débito:** Funcionalidades normativas desplegadas de manera progresiva bajo demanda. Las facturas aprobadas NO se editan directamente.
 - **Dispositivos:** Web optimizada y PWA instalable desde el navegador. App nativa en agenda futura.
 
@@ -218,7 +209,7 @@ Después de tu primera semana, escríbeme por WhatsApp con la palabra `FEEDBACK`
 ---
 
 > 🇨🇴 *Hecho con orgullo para los comercios de Colombia.*
-> *Kiosko Comercial V3.2*
+> *Kiosko Comercial V3.3*
 > *"Vende más, factura mejor, sin complicaciones"*
 
-¡Gracias por confiar en Kiosko Comercial! Que las ventas se multipliquen. 🇨🇴📈
+¡Gracias por confiar en Kiosko Comercial! Que las ventas se multipliquen. 🇨🇴

@@ -1,15 +1,15 @@
-# Arquitectura - Kiosko Comercial V3.2 (SaaS)
+# Arquitectura - Kiosko Comercial V3.3 (SaaS)
 
-Este documento describe la arquitectura y los módulos principales de la plataforma Kiosko Comercial V3.2, un sistema de Punto de Venta (POS) y facturación electrónica diseñado para tenderos y comerciantes, bajo un modelo de Software as a Service (SaaS). Ha alcanzado su **Gran Lanzamiento (Go-Live)** y opera bajo una arquitectura **Full-Stack SPA (Single Page Application)** robusta, con un enfoque **Offline-First**.
+Este documento describe la arquitectura y los módulos principales de la plataforma Kiosko Comercial V3.3, un sistema de Punto de Venta (POS) y facturación electrónica diseñado para tenderos y comerciantes, bajo un modelo de Software as a Service (SaaS). Ha alcanzado su **Gran Lanzamiento (Go-Live)** y opera bajo una arquitectura **Full-Stack SPA (Single Page Application)** robusta, con un enfoque **Offline-First**.
 
 ## 1. Stack Tecnológico e Infraestructura Productiva
 
 * **Dominios y Redirección:** `kioskocomercial.com` y `www.kioskocomercial.com` (conectados vía Cloud Run).
-* **Frontend Distribuido:** React 18, TypeScript, Vite, Tailwind CSS (diseño enfocado en alta legibilidad, modo oscuro por defecto y UX para usuarios mayores de 50 años).
-* **Servidor Backend Global (Cloud Run):** Desplegado en us-east1 o us-central1, usando Node.js y Express 5 nativo. Provee middleware estático y de Vite para el frontend, expone la API REST segura (`/api/*`) y maneja eventos externos (Webhooks Wompi, Emisión DIAN).
+* **Frontend Distribuido:** React 19, TypeScript, Vite, Tailwind CSS (diseño enfocado en alta legibilidad, modo oscuro por defecto y UX para usuarios mayores de 50 años).
+* **Servidor Backend Global (Cloud Run):** Desplegado en us-central1, usando Node.js 22 y Express 5 nativo. Provee middleware estático para el frontend, expone la API REST segura (`/api/*`) y maneja eventos externos (Webhooks Wompi, Emisión DIAN, proxy del asistente Don J).
 * **Base de Datos / Persistencia:** Firebase Firestore (Almacenamiento persistente en la nube) y Firebase Authentication.
 * **Sincronización Local (Offline-First):** Estado local manejado para funcionamiento ultra rápido, sincronizado en tiempo real con Firestore a través del servicio local de almacenamiento (`storageService.ts` / `firebaseSyncService.ts`).
-* **Seguridad Estricta:** Reglas IAM de Firebase/Storage, y protección de secretos transaccionales (`CERTIFICATE_PIN`, Claves de Wompi) delegadas a variables de entorno en Google Cloud Run.
+* **Seguridad Estricta:** Reglas IAM de Firebase/Storage, y protección de secretos transaccionales (`CERTIFICATE_PIN`, Claves de Wompi) delegadas a variables de entorno y Google Secret Manager en Cloud Run.
 
 ## 2. Decisiones Clave de Diseño y Módulos Principales
 
@@ -31,14 +31,16 @@ Este documento describe la arquitectura y los módulos principales de la platafo
 * **Event-Driven:** Integración completa de Wompi para gestión de suscripciones. Las transacciones inician en el Frontend con el Widget de Wompi (que redirecciona al concluir) y se verifican criptográficamente en el Backend.
 * **Modelo de Negocio:** Periodo de prueba gratuito (15 días), seguido de suscripción mensual ($49.900 COP) o anual ($499.000 COP, equivalente a 2 meses gratis).
 * **Validación de Integridad:** El backend utiliza la llave de eventos / `WOMPI_INTEGRITY_SECRET` configurado en Cloud Run para validar las firmas criptográficas de las transacciones, asegurando que solo pagos aprobados cambien el estado del usuario a `ACTIVE` de forma automática.
+* **Estado:** Operando en producción con llaves reales de Wompi; los cobros reales están activos y verificados de extremo a extremo.
 * **Onboarding:** Periodo de prueba gratuito (Trial) automatizado al registro. Los superusuarios tienen bypass automático para propósitos de soporte.
 
 ### 2.5 Asistente de Inteligencia Artificial (Don J - sumercé)
-* Asistente conversacional basado en la API de Gemini (Google), que reside de manera segura en el backend (`server.ts`), con System Instruction V3.2 (Enterprise-Ready).
+* Asistente conversacional basado en la API de Gemini (Google), que reside de manera segura en el backend (`server.ts`), con System Instruction V3.3 (Enterprise-Ready con discriminador pregunta/venta).
 * **Inyección de Contexto, Roles y Features:** El backend inyecta activamente en la sesión de Don J el plan activo (`userPlan`), el rol del usuario (`userRole`, leído de Firestore y nunca del cliente), el catálogo de planes (`planCatalog`) y las banderas de características (`features.notasCredito`), garantizando que la IA module su tono, respete la confidencialidad por rol y solo ofrezca funcionalidades habilitadas para el plan del usuario.
-* **Validación de Payload V3.2:** El endpoint `/api/dian/transmit` valida con `dianPayloadSchema` (Zod) los tipos de documento 91/92/93 y métodos de pago Contado/Crédito, con validaciones cruzadas (nota obligatoria para 92/93, fecha de vencimiento obligatoria para crédito) y guarda server-side que bloquea notas hasta habilitar su backend. Don J tiene reglas inquebrantables de comportamiento para evitar alucinaciones, garantizando que responde siempre en texto plano conversacional excepto cuando hay intención de facturar explícitamente.
+* **Validación de Payload V3.2:** El endpoint `/api/dian/transmit` valida con `dianPayloadSchema` (Zod) los tipos de documento 91/92/93 y métodos de pago Contado/Crédito, con validaciones cruzadas (nota obligatoria para 92/93, fecha de vencimiento obligatoria para crédito) y guarda server-side que bloquea notas hasta habilitar su backend.
+* **Don J V3.3 (Discriminador Pregunta/Venta):** La IA solo genera el JSON de factura cuando el usuario realiza una venta real (verbos: vender, facturar, cobrar, emitir factura, con productos y precios). Para preguntas conceptuales ("¿cuánto gané?", "¿qué es el IVA?") responde únicamente con texto explicativo, sin estructura JSON, evitando facturas vacías y alucinaciones.
 * Funciones (Function Calling) habilitadas para emitir facturas y guiar al usuario mediante lenguaje natural empático, pensado para usuarios mayores.
-* **Seguridad:** Todo el flujo y el uso de `GEMINI_API_KEY` ocurre únicamente mediante variables de ambiente en Cloud Run. El endpoint del asistente requiere token Firebase verificado.
+* **Seguridad:** Todo el flujo y el uso de `GEMINI_API_KEY` ocurre únicamente mediante variables de ambiente en Cloud Run. El endpoint del asistente requiere token Firebase verificado (`verifyFirebaseToken`).
 
 ## 3. Decisiones de Diseño (UX / UI)
 * Uso de variables y nombres de funciones libres de tecnicismos donde el usuario final pueda verlos.

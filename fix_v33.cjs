@@ -1,142 +1,15 @@
-import express from "express";
-import path from "path";
-import fsSync, { promises as fs } from "fs";
-import cors from "cors";
-import admin from "firebase-admin";
-import { getFirestore } from "firebase-admin/firestore";
-import rateLimit from "express-rate-limit";
-import * as functions from "firebase-functions";
-import { GoogleGenAI } from "@google/genai";
-import pino from "pino";
-import os from "os";
-import { dianTransmitHandler, verifyFirebaseToken } from "./backend/dianBackendHandlers.js";
-import { verifyPaymentHandler, getWompiPublicKey, getWompiSignature } from "./backend/paymentsHandler.js";
+const fs = require('fs');
 
-// Logger estructurado
-const logger = pino({ level: 'info' });
+let serverFile = fs.readFileSync('server.ts', 'utf8');
 
-// Inicializar Firebase Admin de forma segura
-try {
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      projectId: process.env.FIREBASE_PROJECT_ID || 'gen-lang-client-0213647704',
-    });
-    logger.info('[Server] Firebase Admin inicializado correctamente');
-  }
-} catch (e) {
-  logger.warn({ err: e }, "[Server] Firebase Admin bypass: Corriendo sin credenciales de proyecto.");
-}
+const targetStart = 'const systemInstruction = `// INSTRUCCIÓN DE SISTEMA';
+const targetEnd = '${JSON.stringify(enrichedContext)}`;';
 
-// Inicialización diferida de GoogleGenAI
-let aiClientInstance: GoogleGenAI | null = null;
-function getGeminiClient(): GoogleGenAI {
-  if (!aiClientInstance) {
-    const key = process.env.GEMINI_API_KEY || process.env.API_KEY;
-    if (!key) {
-      throw new Error("GEMINI_API_KEY no está configurada en las variables de entorno del servidor.");
-    }
-    aiClientInstance = new GoogleGenAI({
-      apiKey: key,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'kiosko-comercial-firebase-functions',
-        }
-      }
-    });
-    logger.info('[Server] Gemini AI inicializado');
-  }
-  return aiClientInstance;
-}
+const startIndex = serverFile.indexOf(targetStart);
+const endIndex = serverFile.indexOf(targetEnd);
 
-const app = express();
-app.set("trust proxy", 1); // Necesario para express-rate-limit detrás de un proxy (ej. Cloud Run)
-const isProd = process.env.NODE_ENV === "production";
-
-app.use(cors({ origin: true }));
-
-// ============================================================================
-// MIDDLEWARE CRÍTICO: Capturar rawBody para validación de firma Wompi
-// DEBE IR ANTES DE express.json()
-app.use((req: any, res, next) => {
-  if (req.originalUrl.includes("/webhook")) {
-    req.rawBody = req.body ? req.body.toString("utf8") : "";
-  }
-  next();
-});
-// Middleware JSON para todas las demás rutas
-app.use(express.json({ limit: '1mb' }));
-
-const dianLimit = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  message: { success: false, message: 'Demasiados intentos. Intente más tarde.' }
-});
-
-const assistantLimit = rateLimit({
-  windowMs: 1 * 60 * 1000,
-  max: 30,
-  message: { error: 'Tranquilo socio, dame un respiro. Demasiadas preguntas por minuto.' }
-});
-
-// API Routes
-app.get("/api/health", (req, res) => {
-  res.json({ 
-    status: "ok", 
-    mode: isProd ? 'production' : 'development',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
-});
-
-app.post("/api/dian/transmit", verifyFirebaseToken, dianLimit, dianTransmitHandler);
-app.post("/api/payments/verify", verifyFirebaseToken, verifyPaymentHandler);
-app.post("/api/payments/signature", verifyFirebaseToken, getWompiSignature);
-app.get("/api/config/wompi", getWompiPublicKey);
-
-app.post("/api/gemini/assistant", verifyFirebaseToken, assistantLimit, async (req, res) => {
-  try {
-    const uid = (req as any).user?.uid;
-    if (!uid) {
-      res.status(401).json({ error: "No autenticado." });
-      return;
-    }
-
-    const { query, contextData } = req.body;
-    if (!query) {
-      res.status(400).json({ error: "Falta la pregunta (query)." });
-      return;
-    }
-
-    // LECTURA DESDE FIRESTORE (fuente de verdad)
-    let userPlan = "EMPRENDE";
-    let userRole = "OWNER";
-    try {
-      const subSnap = await getFirestore(admin.app(), "ai-studio-745f93d7-7ad5-4ca5-ac57-45443e5e4b15").collection("subscriptions").doc(uid).get();
-      if (subSnap.exists) {
-        userPlan = subSnap.data()?.plan ?? "EMPRENDE";
-      }
-      const profileSnap = await getFirestore(admin.app(), "ai-studio-745f93d7-7ad5-4ca5-ac57-45443e5e4b15").collection("users").doc(uid).get();
-      if (profileSnap.exists) {
-        userRole = profileSnap.data()?.role ?? "OWNER";
-      }
-    } catch (dbErr) {
-      logger.warn({ err: dbErr, uid }, "No se pudo leer perfil/plan desde Firestore, usando defaults.");
-    }
-
-    const enrichedContext = {
-      ...(typeof contextData === 'object' && contextData !== null ? contextData : { informacionNegocio: contextData || '' }),
-      userPlan,
-      userRole,
-      planCatalog: {
-        EMPRENDE: { precio_mensual: 49900, precio_anual: 499000, trial_dias: 15 },
-        CRECE:    { precio_mensual: 99900, precio_anual: 999000, trial_dias: 15 },
-        EMPRESA:  { precio_mensual: 199900, precio_anual: 1999000, trial_dias: 15 },
-      },
-      features: { notasCredito: false },
-    };
-
-    const ai = getGeminiClient();
-    const systemInstruction = `// INSTRUCCIÓN DE SISTEMA: ASISTENTE DE FACTURACIÓN KIOSKO COMERCIAL V3.3 (ENTERPRISE-READY)
+if (startIndex !== -1 && endIndex !== -1) {
+  const replacement = `const systemInstruction = \`// INSTRUCCIÓN DE SISTEMA: ASISTENTE DE FACTURACIÓN KIOSKO COMERCIAL V3.3 (ENTERPRISE-READY)
 // ROL: Eres "Don J", el asistente virtual inteligente (sumercé) del Kiosko Comercial. Eres empático, paciente y experto en normativas de la DIAN Colombia. Tu función es ayudar al tendero a facturar rápido y sin enredos.
 
 // MANDATOS DE NEGOCIO Y UX (PÚBLICO 50+):
@@ -227,7 +100,7 @@ app.post("/api/gemini/assistant", verifyFirebaseToken, assistantLimit, async (re
 // - Si la función 'transmitirADIAN' falla o devuelve error, NUNCA muestres códigos HTTP (503, 400, etc.). Responde exactamente así: "Tranquilo, don/doña. La venta ya se guardó segura en el sistema. La vamos a enviar a la DIAN automáticamente apenas se estabilice la conexión. Puede entregar el producto al cliente con total tranquilidad".
 
 // 7. MODULACIÓN POR ROL Y PLAN (ENTERPRISE):
-// - El backend inyecta en el contexto de sesión: 'userPlan' (EMPRENDE|CRECE|EMPRESA) y 'userRole' (OWNER|CASHIER|ACCOUNTANT|ADMIN).
+// - El backend inyecta en el contexto de sesión: \`userPlan\` (EMPRENDE|CRECE|EMPRESA) y \`userRole\` (OWNER|CASHIER|ACCOUNTANT|ADMIN).
 // - Si userRole == OWNER o CASHIER, o userPlan == EMPRENDE (o si no existen esas variables): MANTÉN el tono cálido y 50+ ("sumercé", "socio", analogías de barrio).
 // - Si userRole == ACCOUNTANT o ADMIN, o userPlan == EMPRESA: CAMBIA a tono profesional-contable, preciso y conciso. Puedes usar términos técnicos (PUC, asiento, kárdex valorizado, costo promedio ponderado, aging, base gravable). Sin analogías de barrio.
 // - La empatía y la claridad nunca se pierden en ninguno de los dos modos.
@@ -256,66 +129,11 @@ app.post("/api/gemini/assistant", verifyFirebaseToken, assistantLimit, async (re
 // - Puedes explicar: la prueba gratuita de 15 días, el ciclo de cobro mensual o anual, que la cancelación se hace desde Configuración → Suscripción sin penalización, y que los pagos los procesa Wompi (Bancolombia) de forma segura.
 // - NUNCA gestiones pagos ni reembolsos por chat (ver regla 4). Ante un problema de cobro, ofrece el canal de WhatsApp de soporte y tranquiliza: "Déjeme le reviso el caso con el equipo y le damos solución prioritaria".
 CONTEXTO DE SESIÓN (plan, rol, features y datos del negocio):
-${JSON.stringify(enrichedContext)}`;
+\${JSON.stringify(enrichedContext)}\`;`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.5-flash',
-      contents: query,
-      config: {
-        systemInstruction,
-        temperature: 0.65,
-        maxOutputTokens: 1500,
-        thinkingConfig: { thinkingBudget: 0 }
-      }
-    });
-
-    res.json({ text: response.text });
-  } catch (error: any) {
-    logger.error({ err: error }, "Error al invocar asistente IA");
-    res.status(500).json({ error: error.message || "Error al invocar el asistente de IA." });
-  }
-});
-
-// Vite middleware para desarrollo y frontend estático en producción
-async function startServer() {
-  const distPath = path.join(process.cwd(), "dist");
-  const hasDist = fsSync.existsSync(distPath);
-
-  if (process.env.NODE_ENV !== "production" || !hasDist) {
-    if (process.env.NODE_ENV === "production" && !hasDist) {
-      console.warn("⚠️ NODE_ENV is production but dist/ does not exist. Falling back to Vite middleware.");
-    }
-    const { createServer: createViteServer } = await import("vite");
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*all", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
-  }
-
-  const PORT = Number(process.env.PORT) || 3000;
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-    
-    // Imprimir IPs de red local para facilitar el acceso en otros dispositivos
-    const networkInterfaces = os.networkInterfaces();
-    for (const interfaceName in networkInterfaces) {
-      const interfaces = networkInterfaces[interfaceName];
-      if (interfaces) {
-        for (const iface of interfaces) {
-          if (iface.family === "IPv4" && !iface.internal) {
-            console.log(`  ➜  Network: http://${iface.address}:${PORT}/`);
-          }
-        }
-      }
-    }
-  });
+  serverFile = serverFile.substring(0, startIndex) + replacement + serverFile.substring(endIndex + targetEnd.length);
+  fs.writeFileSync('server.ts', serverFile);
+  console.log('server.ts updated to V3.3');
+} else {
+  console.log('Targets not found');
 }
-
-startServer();
