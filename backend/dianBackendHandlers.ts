@@ -29,8 +29,8 @@ const itemSchema = z.object({
 });
 
 const pagoSchema = z.object({
-  metodo: z.enum(["1", "2"]), // 1 = Contado, 2 = Crédito
-  medio: z.enum(["Efectivo", "Tarjeta", "Transferencia", "Nequi", "Daviplata"]),
+  metodo: z.enum(["1", "2", "1 (Contado)", "2 (Crédito)"]),
+  medio: z.enum(["Efectivo", "Tarjeta", "Transferencia"]),
   recibido: z.number().min(0).optional(),
   cambio: z.number().min(0).optional(),
   fecha_vencimiento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -42,22 +42,21 @@ const notaSchema = z.object({
   concepto: z.string().min(1),
 });
 
-// ===== Schema de validación Zod (Estructura mínima UBL 2.1 para DIAN) =====
 export const dianPayloadSchema = z.object({
-  factura_id: z.string().min(1).max(50),
+  factura_id: z.string().min(1),
   tipo_documento: z.enum(["91", "92", "93"]).default("91"),
   fecha_emision: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  hora_emision: z.string().optional(),
+  hora_emision: z.string(),
   emisor: z.object({
-    nit: z.string().min(1).max(20),
-    razon_social: z.string().min(1).max(200),
-    regimen_fiscal: z.string().optional(),
+    nit: z.string().min(1),
+    razon_social: z.string().min(1),
+    regimen_fiscal: z.string(),
   }),
   adquirente: z.object({
-    tipo_identificacion: z.enum(["13", "31", "22", "42", "51"]),
-    identificacion: z.string().min(1).max(20),
-    razon_social_nombre: z.string().min(1).max(200),
-    email: z.union([z.string().email(), z.literal("")]).optional(),
+    tipo_identificacion: z.enum(["13", "31", "22"]),
+    identificacion: z.string().min(1),
+    razon_social_nombre: z.string().min(1),
+    email: z.string().optional(),
   }),
   items: z.array(itemSchema).min(1),
   totales: z.object({
@@ -69,26 +68,15 @@ export const dianPayloadSchema = z.object({
   nota: notaSchema.optional(),
   notas: z.string().optional(),
 }).superRefine((data, ctx) => {
+  const esCredito = data.pago.metodo === "2" || data.pago.metodo === "2 (Crédito)";
   if ((data.tipo_documento === "92" || data.tipo_documento === "93") && !data.nota) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["nota"],
-      message: "Las notas crédito/débito (92/93) deben incluir el bloque 'nota' con la factura de referencia.",
-    });
+    ctx.addIssue({ code: "custom", path: ["nota"], message: "Las notas crédito/débito (92/93) deben incluir el bloque 'nota' con la factura de referencia." });
   }
   if (data.tipo_documento === "91" && data.nota) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["nota"],
-      message: "Una factura de venta (91) no puede incluir el bloque 'nota'.",
-    });
+    ctx.addIssue({ code: "custom", path: ["nota"], message: "Una factura de venta (91) no puede incluir el bloque 'nota'." });
   }
-  if (data.pago.metodo === "2" && !data.pago.fecha_vencimiento) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["pago", "fecha_vencimiento"],
-      message: "Las ventas a crédito (método 2) deben incluir fecha_vencimiento.",
-    });
+  if (esCredito && !data.pago.fecha_vencimiento) {
+    ctx.addIssue({ code: "custom", path: ["pago", "fecha_vencimiento"], message: "Las ventas a crédito (método 2) deben incluir fecha_vencimiento." });
   }
 });
 
@@ -519,6 +507,17 @@ export const dianTransmitHandler = async (req: express.Request, res: express.Res
           ? validation.error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`)
           : undefined
       });
+    }
+
+    const parsed = validation;
+    // Normalizar método de pago a código DIAN
+    parsed.data.pago.metodo = parsed.data.pago.metodo.startsWith("2") ? "2" : "1";
+    invoice.pago.metodo = parsed.data.pago.metodo;
+
+    // Guarda: las notas (92/93) quedan bloqueadas hasta implementar su backend
+    const NOTAS_CREDITO_HABILITADAS = false;
+    if (parsed.data.tipo_documento !== "91" && !NOTAS_CREDITO_HABILITADAS) {
+      return res.status(403).json({ success: false, message: "Las notas crédito/débito estarán habilitadas en una próxima versión." });
     }
 
     if (settings.certificateExpiry && new Date(settings.certificateExpiry) < new Date()) {
