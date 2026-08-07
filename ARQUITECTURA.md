@@ -1,6 +1,6 @@
-# Arquitectura - Kiosko Comercial V3.1 (SaaS)
+# Arquitectura - Kiosko Comercial V3.2 (SaaS)
 
-Este documento describe la arquitectura y los módulos principales de la plataforma Kiosko Comercial V3.1, un sistema de Punto de Venta (POS) y facturación electrónica diseñado para tenderos y comerciantes, bajo un modelo de Software as a Service (SaaS). Ha alcanzado su **Gran Lanzamiento (Go-Live)** y opera bajo una arquitectura **Full-Stack SPA (Single Page Application)** robusta, con un enfoque **Offline-First**.
+Este documento describe la arquitectura y los módulos principales de la plataforma Kiosko Comercial V3.2, un sistema de Punto de Venta (POS) y facturación electrónica diseñado para tenderos y comerciantes, bajo un modelo de Software as a Service (SaaS). Ha alcanzado su **Gran Lanzamiento (Go-Live)** y opera bajo una arquitectura **Full-Stack SPA (Single Page Application)** robusta, con un enfoque **Offline-First**.
 
 ## 1. Stack Tecnológico e Infraestructura Productiva
 
@@ -36,7 +36,7 @@ Este documento describe la arquitectura y los módulos principales de la platafo
 ### 2.5 Asistente de Inteligencia Artificial (Don J - sumercé)
 * Asistente conversacional basado en la API de Gemini (Google), que reside de manera segura en el backend (`server.ts`), con System Instruction V3.2 (Enterprise-Ready).
 * **Inyección de Contexto, Roles y Features:** El backend inyecta activamente en la sesión de Don J el plan activo (`userPlan`), el rol del usuario (`userRole`, leído de Firestore y nunca del cliente), el catálogo de planes (`planCatalog`) y las banderas de características (`features.notasCredito`), garantizando que la IA module su tono, respete la confidencialidad por rol y solo ofrezca funcionalidades habilitadas para el plan del usuario.
-* **Validación de Payload V3.1:** El endpoint `/api/dian/transmit` valida con `dianPayloadSchema` (Zod) los tipos de documento 91/92/93 y métodos de pago Contado/Crédito, con validaciones cruzadas (nota obligatoria para 92/93, fecha de vencimiento obligatoria para crédito) y guarda server-side que bloquea notas hasta habilitar su backend.
+* **Validación de Payload V3.2:** El endpoint `/api/dian/transmit` valida con `dianPayloadSchema` (Zod) los tipos de documento 91/92/93 y métodos de pago Contado/Crédito, con validaciones cruzadas (nota obligatoria para 92/93, fecha de vencimiento obligatoria para crédito) y guarda server-side que bloquea notas hasta habilitar su backend. Don J tiene reglas inquebrantables de comportamiento para evitar alucinaciones, garantizando que responde siempre en texto plano conversacional excepto cuando hay intención de facturar explícitamente.
 * Funciones (Function Calling) habilitadas para emitir facturas y guiar al usuario mediante lenguaje natural empático, pensado para usuarios mayores.
 * **Seguridad:** Todo el flujo y el uso de `GEMINI_API_KEY` ocurre únicamente mediante variables de ambiente en Cloud Run. El endpoint del asistente requiere token Firebase verificado.
 

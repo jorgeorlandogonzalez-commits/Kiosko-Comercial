@@ -173,7 +173,7 @@ Abajo a la derecha verás un botón con la cara de **Don J**, tu asistente conta
 ---
 
 ## 🚧 Limitaciones Conocidas
-- **Usuarios:** Gestión de Multi-usuario y roles avanzados progresivamente habilitados en Plan EMPRESA (V3.1+).
+- **Usuarios:** Gestión de Multi-usuario y roles avanzados progresivamente habilitados en Plan EMPRESA (V3.2+).
 - **Notas Crédito / Débito:** Funcionalidades normativas desplegadas de manera progresiva bajo demanda. Las facturas aprobadas NO se editan directamente.
 - **Dispositivos:** Web optimizada y PWA instalable desde el navegador. App nativa en agenda futura.
 
@@ -218,7 +218,7 @@ Después de tu primera semana, escríbeme por WhatsApp con la palabra `FEEDBACK`
 ---
 
 > 🇨🇴 *Hecho con orgullo para los comercios de Colombia.*
-> *Kiosko Comercial V3.1*
+> *Kiosko Comercial V3.2*
 > *"Vende más, factura mejor, sin complicaciones"*
 
 ¡Gracias por confiar en Kiosko Comercial! Que las ventas se multipliquen. 🇨🇴📈
