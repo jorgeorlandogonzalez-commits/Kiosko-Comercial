@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { PosPreview } from './PosPreview';
 import { Store, WifiOff, FileText, CheckCircle2, ChevronRight, Calculator, Smartphone, ShieldCheck } from 'lucide-react';
+
+const SOPORTE_WHATSAPP = "573001234567";
 
 interface LandingPageProps {
   onLoginClick: () => void;
@@ -8,6 +11,7 @@ interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onTerminosClick, onHabilitadorClick }) => {
+  const [isAnnual, setIsAnnual] = useState(false);
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-gray-900 font-sans selection:bg-brand-red selection:text-white">
       {/* Header */}
@@ -32,7 +36,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onTermin
       <section className="pt-40 pb-20 px-6 max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
         <div>
           <div className="inline-block bg-brand-red/10 text-brand-red font-bold px-3 py-1 rounded-full text-xs tracking-widest uppercase mb-6 border border-brand-red/20">
-            Autorizado por la DIAN
+            FACTURAS VÁLIDAS ANTE LA DIAN
           </div>
           <h1 className="text-5xl md:text-6xl font-black text-brand-black leading-[1.1] tracking-tighter mb-6">
             Facturación Electrónica <span className="text-brand-red">Para Tu Negocio.</span> Sin Complicaciones.
@@ -41,12 +45,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onTermin
             El sistema POS más fácil de usar en Colombia. Diseñado para comerciantes reales. Sigue vendiendo incluso sin internet. Desde $49.900 al mes.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <button 
-              onClick={onLoginClick}
-              className="bg-brand-red text-white px-8 py-4 rounded-xl font-black text-lg tracking-wide hover:bg-red-700 transition-all shadow-xl shadow-brand-red/20 flex items-center justify-center gap-2"
-            >
-              Comienza Tu Prueba Gratis
-            </button>
+            <div className="flex flex-col gap-2 w-full sm:w-auto">
+              <button 
+                onClick={onLoginClick}
+                className="bg-brand-red text-white px-8 py-4 rounded-xl font-black text-lg tracking-wide hover:bg-red-700 transition-all shadow-xl shadow-brand-red/20 flex items-center justify-center gap-2"
+              >
+                Comienza Tu Prueba Gratis
+              </button>
+              <p className="text-xs font-bold text-gray-500 text-center sm:text-left">
+                Sin tarjeta de crédito · Cancela cuando quieras
+              </p>
+            </div>
             <a href="#caracteristicas" className="px-8 py-4 rounded-xl font-bold text-gray-600 border-2 border-gray-200 hover:border-gray-300 hover:text-gray-900 transition-all flex items-center justify-center">
               Ver Características
             </a>
@@ -58,13 +67,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onTermin
         </div>
         <div className="relative">
           <div className="absolute inset-0 bg-gradient-to-tr from-brand-red/20 to-transparent rounded-3xl transform rotate-3 scale-105 -z-10"></div>
-          <img 
-            src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&q=80&w=1000" 
-            alt="Comerciante usando sistema POS" 
-            className="rounded-3xl shadow-2xl object-cover h-[500px] w-full border-4 border-white"
-          />
+          <PosPreview />
         </div>
       </section>
+
+      
+      {/* Franja de Confianza */}
+      <div className="bg-brand-black text-white py-8 px-6">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-center items-center gap-8 md:gap-16 font-bold text-sm md:text-base">
+          <div className="flex items-center gap-2"><CheckCircle2 className="text-green-500" size={20}/> Facturas válidas ante la DIAN</div>
+          <div className="flex items-center gap-2"><CheckCircle2 className="text-green-500" size={20}/> Sigue vendiendo sin internet</div>
+          <div className="flex items-center gap-2"><CheckCircle2 className="text-green-500" size={20}/> Soporte humano por WhatsApp</div>
+        </div>
+      </div>
 
       {/* Features Grid */}
       <section id="caracteristicas" className="py-24 bg-brand-black text-white px-6">
@@ -127,16 +142,38 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onTermin
               </li>
             </ul>
           </div>
-          <div className="bg-[#FDFBF7] p-8 rounded-3xl border-2 border-gray-100 w-full md:w-auto text-center shadow-lg transform md:-rotate-2">
-            <p className="text-[10px] font-black tracking-[0.2em] text-gray-400 uppercase mb-2">Suscripción Mensual</p>
+          <div className="bg-[#FDFBF7] p-8 rounded-3xl border-2 border-gray-100 w-full md:w-96 text-center shadow-lg transform md:-rotate-2 flex flex-col items-center">
+            <div className="flex items-center justify-center gap-2 mb-6 bg-gray-100 p-1 rounded-full">
+              <button 
+                onClick={() => setIsAnnual(false)} 
+                className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${!isAnnual ? 'bg-white shadow-sm text-brand-black' : 'text-gray-500'}`}
+              >
+                Mensual
+              </button>
+              <button 
+                onClick={() => setIsAnnual(true)} 
+                className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1 ${isAnnual ? 'bg-brand-red text-white shadow-sm' : 'text-gray-500'}`}
+              >
+                Anual <span className="text-[9px] bg-yellow-400 text-yellow-900 px-1.5 py-0.5 rounded-full whitespace-nowrap">2 MESES GRATIS</span>
+              </button>
+            </div>
+            
+            <p className="text-[10px] font-black tracking-[0.2em] text-gray-400 uppercase mb-2">
+              {isAnnual ? 'Suscripción Anual' : 'Suscripción Mensual'}
+            </p>
             <div className="flex items-start justify-center gap-1 mb-2">
               <span className="text-xl font-bold text-gray-400 mt-2">$</span>
-              <span className="text-6xl font-black text-brand-black tracking-tighter">49.900</span>
+              <span className="text-5xl sm:text-6xl font-black text-brand-black tracking-tighter">
+                {isAnnual ? '499.000' : '49.900'}
+              </span>
             </div>
-            <p className="text-sm font-bold text-gray-500 mb-8">Pesos Colombianos / mes</p>
+            <p className="text-sm font-bold text-gray-500 mb-6">
+              Pesos Colombianos / {isAnnual ? 'año' : 'mes'}
+            </p>
             <button 
               onClick={onLoginClick}
-              className="w-full bg-brand-red text-white py-4 rounded-xl font-black uppercase tracking-widest text-sm hover:bg-brand-black transition-all"
+              className="w-full bg-brand-red text-white px-4 py-4 rounded-xl font-black uppercase tracking-wider sm:tracking-widest text-xs sm:text-sm hover:bg-brand-black transition-all whitespace-normal sm:whitespace-nowrap flex items-center justify-center text-center"
+              style={{ minHeight: '56px' }}
             >
               Iniciar Prueba de 15 Días
             </button>
