@@ -30,6 +30,9 @@ interface FirestoreErrorInfo {
 }
 
 function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  console.error("🔥 FIRESTORE ERROR IN PATH:", path, "OPERATION:", operationType, "ERROR:", error);
+  // We can also alert for better visibility if desired, but console is fine
+
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {

@@ -280,7 +280,7 @@ function MainApp() {
   const checkSubscriptionStatus = () => {
       // BYPASS DE SUSCRIPCIÓN PARA ADMIN
       const emailLower = currentUser?.email?.toLowerCase();
-      if (emailLower === 'jorge.orlando.gonzalez@gmail.com') {
+      if (emailLower === 'jorge.orlando.gonzalez@gmail.com' || emailLower === 'info.msdmed@gmail.com') {
           setTrialDaysLeft(999);
           setIsSubscriptionExpired(false);
           setShowPricing(false);

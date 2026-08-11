@@ -1,6 +1,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
     // ===== 0. Global Safety Net (Deny by Default) =====
     match /{document=**} {
       allow read, write: if false;
@@ -8,8 +9,8 @@ service cloud.firestore {
 
     // ===== Helpers de Autenticación y Roles =====
     
-    function isOwner(userId) { 
-       return request.auth != null && request.auth.uid == userId;
+    function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
     }
     
     function isOperator(userId) {
@@ -23,8 +24,8 @@ service cloud.firestore {
       );
     }
 
-    function isValidId(id) { 
-       return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    function isValidId(id) {
+        return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
     }
     
     function incoming() { return request.resource.data; }
@@ -73,10 +74,12 @@ service cloud.firestore {
 
     // Validación de cliente para factura electrónica (tolera valores opcionales)
     function isValidCustomerForFE(data) {
-      return data.customerNit == '222222222222' || (
-        data.customerName is string && data.customerName.size() > 3 &&
-        (!('customerPhone' in data) || data.customerPhone == null || data.customerPhone == '' || data.customerPhone is string) &&
-        (!('customerEmail' in data) || data.customerEmail == null || data.customerEmail == '' || (data.customerEmail is string && data.customerEmail.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')))
+      return (data.dianStatus == 'DRAFT' || data.dianStatus == 'REJECTED') || (
+        data.customerNit == '222222222222' || (
+          data.customerName is string && data.customerName.size() >= 2 &&
+          (!('customerPhone' in data) || data.customerPhone == null || data.customerPhone == '' || data.customerPhone is string) &&
+          (!('customerEmail' in data) || data.customerEmail == null || data.customerEmail == '' || (data.customerEmail is string && data.customerEmail.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')))
+        )
       );
     }
 
@@ -114,12 +117,12 @@ service cloud.firestore {
         allow read: if isOperator(userId);
         
         allow create: if isOperator(userId) && 
-                      isValidId(invoiceId) && 
-                      isValidInvoiceForCreate(incoming()) &&
+                       isValidId(invoiceId) && 
+                       isValidInvoiceForCreate(incoming()) &&
                       isValidCustomerForFE(incoming());
         
         allow update: if isOperator(userId) && 
-                      isValidInvoice(incoming()) &&
+                       isValidInvoice(incoming()) &&
                       existing().dianStatus != 'APPROVED' &&
                       isValidInvoiceTransition(existing(), incoming()) &&
                       incoming().id == existing().id &&
@@ -128,11 +131,12 @@ service cloud.firestore {
                          (existing().dianStatus == 'SENDING' && incoming().total == existing().total && incoming().customerNit == existing().customerNit)
                       );
                       
-        allow delete: if false;
+        allow delete: if isOperator(userId) && existing().dianStatus != 'APPROVED';
       }
 
       match /invoices_queue/{queueId} {
-        allow read, write: if isOperator(userId) && isValidId(queueId);
+        allow read: if isOperator(userId);
+        allow write: if isOperator(userId) && isValidId(queueId);
       }
       
       match /quotes/{quoteId} {
@@ -153,12 +157,13 @@ service cloud.firestore {
       match /operators/{operatorId} {
         allow read: if isOperator(userId);
         allow create, update: if isAdmin(userId) && 
-                              (request.auth.uid != operatorId || incoming().role == existing().role);
+                               (request.auth.uid != operatorId || incoming().role == existing().role);
         allow delete: if isAdmin(userId) && operatorId != request.auth.uid;
       }
 
       match /data/{documentId} {
-        allow read, write: if isOperator(userId) && isValidId(documentId);
+        allow read: if isOperator(userId);
+        allow write: if isOperator(userId) && isValidId(documentId);
       }
     }
   }
