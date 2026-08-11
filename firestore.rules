@@ -66,7 +66,7 @@ service cloud.firestore {
     // Transiciones válidas de estados DIAN
     function isValidInvoiceTransition(oldData, newData) {
       return oldData.dianStatus == newData.dianStatus ||
-             (oldData.dianStatus == 'DRAFT' && (newData.dianStatus == 'SENDING' || newData.dianStatus == 'REJECTED')) ||
+             (oldData.dianStatus == 'DRAFT' && (newData.dianStatus == 'SENDING' || newData.dianStatus == 'REJECTED' || newData.dianStatus == 'APPROVED')) ||
              (oldData.dianStatus == 'SENDING' && (newData.dianStatus == 'APPROVED' || newData.dianStatus == 'REJECTED' || newData.dianStatus == 'DRAFT')) ||
              (oldData.dianStatus == 'REJECTED' && (newData.dianStatus == 'DRAFT' || newData.dianStatus == 'SENDING'));
     }
@@ -100,13 +100,13 @@ service cloud.firestore {
 
       match /storeSettings/{settingId} {
         allow read: if isOperator(userId);
-        allow write: if isAdmin(userId) && isValidId(settingId);
+        allow write: if isOperator(userId) && isValidId(settingId);
       }
 
       match /products/{productId} {
         allow read: if isOperator(userId);
-        allow create, update: if isAdmin(userId) && isValidId(productId) && 
-                              incoming() is map && isValidProduct(incoming());
+        allow create, update: if isOperator(userId) && isValidId(productId) &&
+                                incoming() is map && isValidProduct(incoming());
         allow delete: if isAdmin(userId);
       }
 
