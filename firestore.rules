@@ -65,7 +65,8 @@ service cloud.firestore {
 
     // Transiciones válidas de estados DIAN
     function isValidInvoiceTransition(oldData, newData) {
-      return (oldData.dianStatus == 'DRAFT' && (newData.dianStatus == 'SENDING' || newData.dianStatus == 'REJECTED')) ||
+      return oldData.dianStatus == newData.dianStatus ||
+             (oldData.dianStatus == 'DRAFT' && (newData.dianStatus == 'SENDING' || newData.dianStatus == 'REJECTED')) ||
              (oldData.dianStatus == 'SENDING' && (newData.dianStatus == 'APPROVED' || newData.dianStatus == 'REJECTED' || newData.dianStatus == 'DRAFT')) ||
              (oldData.dianStatus == 'REJECTED' && (newData.dianStatus == 'DRAFT' || newData.dianStatus == 'SENDING'));
     }
@@ -95,6 +96,7 @@ service cloud.firestore {
       // ✅ CORREGIDO: Permitir que el usuario cree su propio documento al registrarse
       allow read: if isOperator(userId);
       allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
 
       match /storeSettings/{settingId} {
         allow read: if isOperator(userId);
@@ -121,8 +123,10 @@ service cloud.firestore {
                       existing().dianStatus != 'APPROVED' &&
                       isValidInvoiceTransition(existing(), incoming()) &&
                       incoming().id == existing().id &&
-                      incoming().total == existing().total &&
-                      incoming().customerNit == existing().customerNit;
+                      (
+                         (existing().dianStatus in ['DRAFT', 'REJECTED']) || 
+                         (existing().dianStatus == 'SENDING' && incoming().total == existing().total && incoming().customerNit == existing().customerNit)
+                      );
                       
         allow delete: if false;
       }

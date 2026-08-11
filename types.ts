@@ -10,6 +10,25 @@ export enum PaymentMethod {
   CARD = 'Tarjeta'
 }
 
+
+export interface Withholding {
+  id: string;
+  name: string;
+  type: 'ReteFuente' | 'ReteICA' | 'ReteIVA';
+  percentage: number;
+  pucSales?: string;
+  pucPurchases?: string;
+  isActive: boolean;
+}
+
+export interface AppliedWithholding {
+  withholdingId: string;
+  name: string;
+  type: string;
+  percentage: number;
+  amount: number;
+}
+
 export type ViewportMode = 'desktop' | 'laptop' | 'tablet' | 'mobile' | 'auto';
 
 // TIPOS SAAS (NUEVOS)
@@ -137,6 +156,8 @@ export interface Invoice {
   consumptionTaxTotal?: number;
   discount?: number;
   shippingCost?: number;
+  withholdings?: AppliedWithholding[];
+  withholdingsTotal?: number;
   total: number;
   paymentMethod: PaymentMethod;
   paymentDetails?: { method: PaymentMethod; amount: number }[];

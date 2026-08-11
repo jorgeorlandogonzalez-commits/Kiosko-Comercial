@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Product, CartItem, Invoice, PaymentMethod, Quote, StoreSettings, Customer } from '../types';
+import { Product, CartItem, Invoice, PaymentMethod, Quote, StoreSettings, Customer, Withholding, AppliedWithholding } from '../types';
 import { 
   Plus, Minus, Trash2, Search, ShoppingBag, X, Lock,
   DollarSign, CreditCard, Printer, Bot, 
@@ -16,6 +16,7 @@ import {
 } from '../services/dianService';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { getWithholdings } from '../services/storageService';
 
 interface POSProps {
   onInvoiceCreated: (invoice: Invoice) => void;
@@ -79,6 +80,9 @@ export const POS: React.FC<POSProps> = ({
   const [sellerName, setSellerName] = useState('');
   
   const [discountValue, setDiscountValue] = useState<number>(0);
+  const [availableWithholdings, setAvailableWithholdings] = useState<Withholding[]>([]);
+  const [appliedWithholdings, setAppliedWithholdings] = useState<AppliedWithholding[]>([]);
+
   const [isPercentDiscount, setIsPercentDiscount] = useState(false);
   const [shippingCost, setShippingCost] = useState<number>(0);
 
@@ -230,6 +234,10 @@ export const POS: React.FC<POSProps> = ({
     printWindow.document.close();
   };
   
+  
+  useEffect(() => {
+    setAvailableWithholdings(getWithholdings().filter(w => w.isActive));
+  }, []);
   useEffect(() => {
     if (pendingEditInvoiceId && invoices.length > 0) {
       const inv = invoices.find(i => i.id === pendingEditInvoiceId);
@@ -405,7 +413,18 @@ export const POS: React.FC<POSProps> = ({
       }
     });
 
-    const totalPagar = subtotalBase + totalTaxIVA + totalTaxIC + shippingCost;
+    
+    const totalPagarBruto = subtotalBase + totalTaxIVA + totalTaxIC + shippingCost;
+    
+    let withholdingsTotal = 0;
+    const appliedW: AppliedWithholding[] = appliedWithholdings.map(w => {
+      // Calculate amount based on baseImponible (subtotalBase)
+      const amount = (subtotalBase * (w.percentage / 100));
+      withholdingsTotal += amount;
+      return { ...w, amount };
+    });
+
+    const totalPagar = totalPagarBruto - withholdingsTotal;
 
     return {
       subtotalBruto: rawSums.grossTotal,
@@ -414,10 +433,13 @@ export const POS: React.FC<POSProps> = ({
       baseImponible: subtotalBase,
       totalTaxIVA,
       totalTaxIC,
+      withholdingsTotal,
+      appliedWithholdings: appliedW,
       total: Math.max(0, Math.round(totalPagar)),
       articles: rawSums.articles,
       taxBreakdown: Object.values(taxBreakdown)
     };
+
   }, [cart, discountValue, isPercentDiscount, shippingCost]);
 
   const addToCart = (product: Product) => {
@@ -545,6 +567,7 @@ export const POS: React.FC<POSProps> = ({
     setIsProcessing(true);
     const invoiceId = pendingEditInvoiceId || `${storeSettings.prefix}-${storeSettings.currentNumber}`;
     const invoiceDate = originalInvoiceDate || getColombiaISO();
+    
     const invoice: Invoice = {
       id: invoiceId,
       date: invoiceDate,
@@ -556,11 +579,14 @@ export const POS: React.FC<POSProps> = ({
       consumptionTaxTotal: cartTotals.totalTaxIC,
       discount: cartTotals.discountInPesos,
       shippingCost: cartTotals.shippingCost,
+      withholdings: cartTotals.appliedWithholdings,
+      withholdingsTotal: cartTotals.withholdingsTotal,
       total: cartTotals.total,
       paymentMethod: method,
       paymentDetails: mixedData,
       dianStatus: 'DRAFT',
     };
+
 
     if (pendingEditInvoiceId) {
       onUpdateInvoice(invoice);
@@ -585,6 +611,7 @@ export const POS: React.FC<POSProps> = ({
     setCart([]);
     setDiscountValue(0);
     setShippingCost(0);
+    setAppliedWithholdings([]);
     setIsPercentDiscount(false);
     setMixedPayments([]);
     
@@ -867,7 +894,8 @@ export const POS: React.FC<POSProps> = ({
             ${lastInvoice.shippingCost ? `<div class="total-row"><span>Flete:</span> <span>$${formatMoney(lastInvoice.shippingCost)}</span></div>` : ''}
             <div class="total-row"><span>Base Gravable:</span> <span>$${formatMoney(lastInvoice.subtotal)}</span></div>
             <div class="total-row"><span>Total IVA:</span> <span>$${formatMoney(lastInvoice.tax)}</span></div>
-            ${lastInvoice.consumptionTaxTotal ? `<div class="total-row"><span>Impoconsumo:</span> <span>$${formatMoney(lastInvoice.consumptionTaxTotal)}</span></div>` : ''}
+            ${lastInvoice.consumptionTaxTotal ? `<div class="total-row"><span>Impoconsumo:</span> <span>${formatMoney(lastInvoice.consumptionTaxTotal)}</span></div>` : ''}
+            ${lastInvoice.withholdings && lastInvoice.withholdings.length > 0 ? lastInvoice.withholdings.map(w => `<div class="total-row" style="color:red;"><span>${w.name}:</span> <span>-${formatMoney(w.amount)}</span></div>`).join('') : ''}
             <div class="total-row grand-total"><span>TOTAL A PAGAR:</span> <span>$${formatMoney(lastInvoice.total)}</span></div>
           </div>
         </div>
@@ -1005,6 +1033,7 @@ export const POS: React.FC<POSProps> = ({
     setCart([]);
     setDiscountValue(0);
     setShippingCost(0);
+    setAppliedWithholdings([]);
     setIsPercentDiscount(false);
     setMixedPayments([]);
     
@@ -1062,7 +1091,12 @@ export const POS: React.FC<POSProps> = ({
       msg += `Total IVA: $${formatMoney(lastInvoice.tax)}\n`;
     }
     if (lastInvoice.consumptionTaxTotal && lastInvoice.consumptionTaxTotal > 0) {
-      msg += `Imp. Consumo: $${formatMoney(lastInvoice.consumptionTaxTotal)}\n`;
+      msg += `Imp. Consumo: ${formatMoney(lastInvoice.consumptionTaxTotal)}\n`;
+    }
+    if (lastInvoice.withholdings && lastInvoice.withholdings.length > 0) {
+      lastInvoice.withholdings.forEach(w => {
+        msg += `${w.name}: -${formatMoney(w.amount)}\n`;
+      });
     }
     
     msg += `\n*TOTAL A PAGAR: $${formatMoney(lastInvoice.total)}*\n`;
@@ -1267,6 +1301,46 @@ export const POS: React.FC<POSProps> = ({
               <span className="text-xs font-black text-green-600">+${formatMoney(shippingCost)}</span>
             </div>
           </div>
+
+          {availableWithholdings.length > 0 && (
+            <div className="flex flex-col gap-2 bg-white p-2 rounded-xl border border-gray-200 shadow-sm mt-2">
+              <div className="flex items-center gap-2">
+                <Percent size={18} className="text-brand-red" />
+                <span className="text-[10px] font-black uppercase text-gray-500">Aplicar Retención:</span>
+                <select 
+                  className="flex-1 border-b-2 border-gray-200 bg-transparent py-1 px-1 outline-none text-xs font-bold text-gray-800"
+                  onChange={e => {
+                    const w = availableWithholdings.find(aw => aw.id === e.target.value);
+                    if (w && !appliedWithholdings.some(aw => aw.withholdingId === w.id)) {
+                      setAppliedWithholdings([...appliedWithholdings, { withholdingId: w.id, name: w.name, type: w.type, percentage: w.percentage, amount: 0 }]);
+                    }
+                    e.target.value = "";
+                  }}
+                >
+                  <option value="">Seleccionar retención...</option>
+                  {availableWithholdings.map(w => (
+                    <option key={w.id} value={w.id}>{w.name} ({w.percentage}%)</option>
+                  ))}
+                </select>
+              </div>
+              
+              {appliedWithholdings.length > 0 && (
+                <div className="flex flex-col gap-1 mt-1 border-t border-gray-100 pt-2">
+                  {cartTotals.appliedWithholdings && cartTotals.appliedWithholdings.map(aw => (
+                    <div key={aw.withholdingId} className="flex justify-between items-center bg-gray-50 px-2 py-1 rounded-lg border border-gray-100 text-xs">
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setAppliedWithholdings(appliedWithholdings.filter(w => w.withholdingId !== aw.withholdingId))} className="text-gray-400 hover:text-red-500 transition-colors">
+                          <Trash2 size={12} />
+                        </button>
+                        <span className="font-bold text-gray-700">{aw.name}</span>
+                      </div>
+                      <span className="font-black text-brand-red">-${formatMoney(aw.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

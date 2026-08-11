@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { SettingsWithholdings } from './SettingsWithholdings';
 import { StoreSettings } from '../types';
 import { ShieldAlert, Save, Store, MapPin, Phone, FileCheck, AlertCircle, Cpu, ShieldCheck, Palette, Trash2, AlertTriangle, Fingerprint, Download, Database, Printer, X, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { uploadFile } from '../services/cloudStorageService';

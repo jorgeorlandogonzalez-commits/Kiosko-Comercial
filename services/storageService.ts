@@ -1,5 +1,5 @@
 
-import { Product, Customer, Supplier, Invoice, Quote, Order, CreditAccount, KardexEntry, SupplierAccount, Expense } from '../types';
+import { Product, Customer, Supplier, Invoice, Quote, Order, CreditAccount, KardexEntry, SupplierAccount, Expense , Withholding} from '../types';
 import { saveToFirestore, saveArrayToFirestore, syncCollection, syncArrayDocument, deleteFromFirestore } from './firebaseSyncService';
 
 const KEYS = {
@@ -14,6 +14,7 @@ const KEYS = {
   KARDEX: 'kiosko_kardex',
   CATEGORIES: 'kiosko_categories',
   EXPENSES: 'kiosko_expenses',
+  WITHHOLDINGS: 'kiosko_withholdings',
 };
 
 const INITIAL_PRODUCTS: Product[] = [
@@ -29,6 +30,10 @@ const INITIAL_SUPPLIERS: Supplier[] = [
     { nit: '800111222', name: 'Distribuidora Central', contactName: 'Carlos Vendedor' },
 ];
 
+const INITIAL_WITHHOLDINGS: Withholding[] = [
+  { id: '1', name: 'ReteFuente Compras (2.5%)', type: 'ReteFuente', percentage: 2.5, isActive: true },
+  { id: '2', name: 'ReteICA (0.414%)', type: 'ReteICA', percentage: 0.414, isActive: true }
+];
 const INITIAL_CATEGORIES = ['General', 'Abarrotes', 'Bebidas', 'Licores', 'Fruver', 'Lácteos', 'Aseo'];
 
 let currentUserId: string | null = null;
@@ -89,7 +94,8 @@ export const initDbService = (userId: string, onUpdate: () => void) => {
     syncArrayDocument<CreditAccount>(userId, 'credit_accounts', KEYS.CREDIT, onUpdate),
     syncArrayDocument<SupplierAccount>(userId, 'supplier_accounts', KEYS.CXP, onUpdate),
     syncArrayDocument<KardexEntry>(userId, 'kardex', KEYS.KARDEX, onUpdate),
-    syncArrayDocument<string>(userId, 'categories', KEYS.CATEGORIES, onUpdate)
+    syncArrayDocument<string>(userId, 'categories', KEYS.CATEGORIES, onUpdate),
+    syncArrayDocument<Withholding>(userId, 'withholdings', KEYS.WITHHOLDINGS, onUpdate)
   );
 };
 
@@ -294,4 +300,10 @@ export const dbService = {
         localStorage.removeItem(activeKey);
     });
   }
+};
+
+export const getWithholdings = (): Withholding[] => getFromStorage<Withholding>(KEYS.WITHHOLDINGS, INITIAL_WITHHOLDINGS);
+export const saveWithholdings = (withholdings: Withholding[]): void => {
+  saveToStorage(KEYS.WITHHOLDINGS, withholdings);
+  if (currentUserId) saveArrayToFirestore(currentUserId, 'withholdings', withholdings);
 };
