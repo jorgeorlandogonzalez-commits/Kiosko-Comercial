@@ -1,14 +1,7 @@
 const fs = require('fs');
-const file = 'MainApp.tsx';
-let content = fs.readFileSync(file, 'utf8');
+let serverFile = fs.readFileSync('server.ts', 'utf8');
 
-content = content.replace(`  const handleDeleteExpense = (id: string) => {
-      const updated = dbService.deleteExpense(id);
-      setExpenses(updated);
-  const handleEditExpense = (updatedExpense: Expense) => {`, `  const handleDeleteExpense = (id: string) => {
-      const updated = dbService.deleteExpense(id);
-      setExpenses(updated);
-  };
-  const handleEditExpense = (updatedExpense: Expense) => {`);
+serverFile = serverFile.replace('`userPlan` (EMPRENDE|CRECE|EMPRESA) y `userRole`', '\\`userPlan\\` (EMPRENDE|CRECE|EMPRESA) y \\`userRole\\`');
 
-fs.writeFileSync(file, content);
+fs.writeFileSync('server.ts', serverFile);
+console.log('Fixed backticks');

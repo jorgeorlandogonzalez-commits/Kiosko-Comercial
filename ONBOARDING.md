@@ -2,7 +2,7 @@
 > **¡Hola, socio!** 👋
 > Gracias por confiar en **Kiosko Comercial**.
 > Esta guía te llevará paso a paso para que en **menos de 10 minutos** estés facturando legalmente y sin complicaciones.
-> *¿Algo no queda claro? Escríbeme directo al WhatsApp: [Tu número aquí]* 📱
+> *¿Algo no queda claro? Escríbeme directo al WhatsApp: +57 3247804513* 📱
 
 ---
 
@@ -65,6 +65,18 @@ Las facturas que generes tienen **validez legal real ante la DIAN**. Cada docume
    - Te llegará con una contraseña temporal (PIN)
    - Guárdalo en lugar seguro y cambia la contraseña
    - ¡Listo para subir a Kiosko Comercial!
+
+### 🔒 ¿Dónde guardamos tu certificado?
+
+Tu archivo .p12 se almacena **cifrado y protegido** en servidores seguros de Google Cloud (infraestructura con certificaciones SOC 2, ISO 27001 y cumplimiento GDPR). 
+
+- **Nadie en Kiosko Comercial** puede ver ni descargar tu certificado.
+- Solo el sistema automatizado lo usa para firmar, y **solo cuando tú** presionas el botón "Emitir factura".
+- Puedes **eliminar tu certificado en cualquier momento** desde Configuración → Certificado Digital → Eliminar permanentemente.
+- Si cancelas tu suscripción, tus datos se eliminan permanentemente en 30 días (salvo facturas que la ley exige conservar por 5 años).
+
+> 💡 **Transparencia total:** Lee nuestra [Política de Privacidad](/privacidad) y [Términos y Condiciones](/terminos) completos.
+
 
 > 💡 **¿No tienes contador?** No te preocupes. El proceso es sencillo y las certificadoras te guían paso a paso. Si te trabas, escríbeme al WhatsApp y te ayudo. 📱
 
@@ -138,7 +150,7 @@ En tu panel verás estos colores:
 
 ## 🤖 ¿Necesitas ayuda rápida? Pregunta a Don J
 
-Abajo a la derecha verás un botón con la cara de **Don J**, tu asistente contable. Puede responder dudas sobre IVA, costos, facturación y DIAN en lenguaje cotidiano. ¡Pruébalo sin miedo!
+Abajo a la derecha verás un botón con la cara de **Don J**, tu asistente inteligente para tu negocio. Puede responder dudas sobre IVA, costos, facturación y DIAN en lenguaje cotidiano. ¡Pruébalo sin miedo!
 
 **Ejemplos de preguntas para Don J:**
 - *"¿Cómo facturo a consumidor final?"*
@@ -165,6 +177,7 @@ Abajo a la derecha verás un botón con la cara de **Don J**, tu asistente conta
 ## 🚧 Limitaciones Conocidas
 
 - **Usuarios:** Gestión de Multi-usuario y roles avanzados progresivamente habilitados en Plan EMPRESA (V3.3+).
+- **Planes CRECE y EMPRESA:** Disponibles en preventa/lista de espera. Contacta a soporte para más información.
 - **Notas Crédito / Débito:** Funcionalidades normativas desplegadas de manera progresiva bajo demanda. Las facturas aprobadas NO se editan directamente.
 - **Dispositivos:** Web optimizada y PWA instalable desde el navegador. App nativa en agenda futura.
 
@@ -172,9 +185,19 @@ Abajo a la derecha verás un botón con la cara de **Don J**, tu asistente conta
 
 ## 🆘 Soporte Directo
 
-- 📱 **WhatsApp Directo:** [Tu número] *(Respuesta < 2h hábiles)*
+- 📱 **WhatsApp Directo:** +57 3247804513 *(Respuesta < 2h hábiles)*
 - 📧 **Correo:** soporte@kioskocomercial.com *(Temas no urgentes)*
 - 🕐 **Horario:** Lunes a Sábado, 8:00 AM - 6:00 PM (COL)
+
+### 🛡️ Tus Datos Están Protegidos
+
+Kiosko Comercial cumple con la **Ley 1581 de 2012** (Protección de Datos Personales de Colombia). Tienes derecho a:
+- **Acceder** a tus datos personales
+- **Rectificar** información incorrecta
+- **Cancelar** tu cuenta y eliminar tus datos
+- **Oponerte** al tratamiento de tus datos
+
+Para ejercer estos derechos (ARCO), escríbenos a soporte@kioskocomercial.com con asunto "Derechos ARCO".
 
 📝 **Tu opinión nos ayuda a mejorar:**
 Después de tu primera semana, escríbeme por WhatsApp con la palabra `FEEDBACK` y cuéntame qué te pareció. Los primeros 10 comercios reciben **3 meses gratis** en la versión completa. 🎁

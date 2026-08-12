@@ -27,6 +27,20 @@ Este documento describe la arquitectura y los módulos principales de la platafo
 * Se encarga de la generación del código de seguridad (CUFE) mediante algoritmos oficiales.
 * El manejo del certificado digital (P12) y su contraseña (`CERTIFICATE_PIN`) ocurre estrictamente del lado del servidor.
 
+#### 2.3.1 Seguridad del Certificado Digital
+- **Almacenamiento:** El archivo .p12 se almacena en Firebase Storage bajo el path `users/{uid}/certificates/` con reglas de seguridad estrictas que impiden lectura pública. El PIN se almacena en Google Secret Manager con rotación automática.
+- **Custodia:** Kiosko Comercial actúa como **custodio técnico** del certificado bajo autorización explícita y revocable del usuario. El certificado NUNCA se expone al frontend ni se transmite fuera de la infraestructura de Google Cloud.
+- **Firma:** La firma criptográfica del XML ocurre exclusivamente en el backend (Cloud Run) en memoria efímera, sin persistencia en disco.
+- **Auditoría:** Cada uso del certificado se registra en logs estructurados (timestamp, userId, invoiceId) para trazabilidad legal.
+- **Eliminación:** Cuando el usuario elimina su certificado desde Configuración, se ejecuta un purge inmediato tanto en Storage como en Secret Manager (no soft-delete).
+
+#### 2.3.2 Pipeline de Reintentos DIAN (Anti-Pérdida)
+- **Cola de Reintentos:** Las facturas que fallan en transmisión a DIAN (timeout, error 503, red caída) se encolan automáticamente en Firestore bajo la colección `users/{userId}/invoices_queue` con estado `PENDING_DIAN`.
+- **Estrategia de Reintentos:** Backend job periódico (cada 5 minutos) procesa la cola con reintentos exponenciales (1min, 5min, 15min, 1h, 4h).
+- **Idempotencia:** Cada reintento envía el mismo CUFE candidato para evitar duplicados ante la DIAN.
+- **Dead Letter Queue:** Después de 5 intentos fallidos, la factura se marca como `FAILED` y se notifica al usuario vía email + WhatsApp.
+- **Garantía:** At-least-once delivery. La factura se marca como `APPROVED` solo al recibir ACK explícito de la DIAN o del Proveedor Tecnológico.
+
 ### 2.4 Motor SaaS y Pasarela de Pagos (Wompi Bancolombia)
 * **Event-Driven:** Integración completa de Wompi para gestión de suscripciones. Las transacciones inician en el Frontend con el Widget de Wompi (que redirecciona al concluir) y se verifican criptográficamente en el Backend.
 * **Modelo de Negocio:** Periodo de prueba gratuito (15 días), seguido de suscripción mensual ($49.900 COP) o anual ($499.000 COP, equivalente a 2 meses gratis).
@@ -35,7 +49,7 @@ Este documento describe la arquitectura y los módulos principales de la platafo
 * **Onboarding:** Periodo de prueba gratuito (Trial) automatizado al registro. Los superusuarios tienen bypass automático para propósitos de soporte.
 
 ### 2.5 Asistente de Inteligencia Artificial (Don J - sumercé)
-* Asistente conversacional basado en la API de Gemini (Google), que reside de manera segura en el backend (`server.ts`), con System Instruction V3.3 (Enterprise-Ready con discriminador pregunta/venta).
+* Asistente conversacional basado en la API de Gemini (Google), que reside de manera segura en el backend (`server.ts`), con System Instruction V3.5 (Alma + Enterprise-Ready: personalidad original de Don J restaurada + discriminador pregunta/venta + régimen fiscal dinámico).
 * **Inyección de Contexto, Roles y Features:** El backend inyecta activamente en la sesión de Don J el plan activo (`userPlan`), el rol del usuario (`userRole`, leído de Firestore y nunca del cliente), el catálogo de planes (`planCatalog`) y las banderas de características (`features.notasCredito`), garantizando que la IA module su tono, respete la confidencialidad por rol y solo ofrezca funcionalidades habilitadas para el plan del usuario.
 * **Validación de Payload V3.2:** El endpoint `/api/dian/transmit` valida con `dianPayloadSchema` (Zod) los tipos de documento 91/92/93 y métodos de pago Contado/Crédito, con validaciones cruzadas (nota obligatoria para 92/93, fecha de vencimiento obligatoria para crédito) y guarda server-side que bloquea notas hasta habilitar su backend.
 * **Don J V3.3 (Discriminador Pregunta/Venta):** La IA solo genera el JSON de factura cuando el usuario realiza una venta real (verbos: vender, facturar, cobrar, emitir factura, con productos y precios). Para preguntas conceptuales ("¿cuánto gané?", "¿qué es el IVA?") responde únicamente con texto explicativo, sin estructura JSON, evitando facturas vacías y alucinaciones.
@@ -53,3 +67,21 @@ El pipeline de Cloud Build se activa mediante triggers desde GitHub, realizando:
 2. Compilación (Build) Docker con imagen ligera `node:22-alpine` multi-stage.
 3. Push al Artifact Registry en GCP.
 4. Despliegue automático (Deploy) a Cloud Run, mapeando el tráfico al nuevo contenedor y exponiéndolo bajo el dominio configurado.
+
+
+## 📡 Anexo D: API Endpoints Documentados
+
+### Endpoints de Facturación Electrónica
+- `POST /api/dian/transmit` → Firma XML con certificado .p12 y transmite a DIAN/PT. Requiere Bearer token Firebase.
+- `GET /api/dian/estado/:cufe` → Consulta estado de factura en DIAN por CUFE.
+
+### Endpoints de Asistente IA
+- `POST /api/gemini/assistant` → Proxy seguro a Gemini API con contexto inyectado (plan, rol, features). Requiere Bearer token Firebase.
+
+### Endpoints de Pagos
+- `POST /api/payments/webhook` → Recibe eventos asíncronos de Wompi Bancolombia, valida firma HMAC y actualiza estado de suscripción.
+- `POST /api/payments/create-subscription` → Crea nueva suscripción y redirige a widget de Wompi.
+- `GET /api/payments/status/:userId` → Consulta estado de suscripción activa.
+
+### Endpoints de Sistema
+- `GET /api/health` → Health check del contenedor (uptime, versión, modo).

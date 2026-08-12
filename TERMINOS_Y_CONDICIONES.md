@@ -1,5 +1,5 @@
-# TÉRMINOS Y CONDICIONES DE USO - KIOSKO COMERCIAL BETA
-**Última actualización:** Mayo 2026
+# TÉRMINOS Y CONDICIONES DE USO - KIOSKO COMERCIAL
+**Última actualización:** Agosto 2026
 
 ## 1. ACEPTACIÓN DE TÉRMINOS
 Al acceder, registrarse o utilizar la plataforma Kiosko Comercial ("el Servicio"), el usuario ("el Comerciante") acepta quedar vinculado a estos Términos y Condiciones. Si no está de acuerdo con alguna parte, no debe utilizar el Servicio.
@@ -32,6 +32,7 @@ Al acceder, registrarse o utilizar la plataforma Kiosko Comercial ("el Servicio"
 6.1. Kiosko Comercial trata los datos personales del Comerciante y sus clientes conforme a la Ley 1581 de 2012 y el Decreto 1377 de 2013.
 6.2. Los datos se utilizan exclusivamente para: prestación del Servicio, cumplimiento de obligaciones tributarias, soporte técnico y mejoras de la plataforma.
 6.3. El Comerciante es responsable de obtener el consentimiento de sus clientes finales para el tratamiento de datos personales en facturación electrónica.
+6.4. El Comerciante y sus clientes pueden ejercer los derechos de Acceso, Rectificación, Cancelación y Oposición (ARCO) enviando solicitud a soporte@kioskocomercial.com con asunto "Derechos ARCO". Kiosko Comercial atenderá la solicitud en los términos del Decreto 1377 de 2013.
 
 ## 7. LIMITACIÓN DE RESPONSABILIDAD
 7.1. Kiosko Comercial no se hace responsable por:
@@ -42,13 +43,13 @@ Al acceder, registrarse o utilizar la plataforma Kiosko Comercial ("el Servicio"
 7.2. La responsabilidad máxima de Kiosko Comercial se limita al monto pagado por el Comerciante en los últimos 3 meses de suscripción.
 
 ## 8. CONDICIONES DE LA BETA Y PAGOS
-8.1. La versión Beta se ofrece con fines de validación y mejora continua. Pueden presentarse actualizaciones frecuentes y cambios funcionales.
-8.2. Precio: $49.900 COP/mes por comercio. Incluye acceso completo, soporte prioritario y actualizaciones.
+8.1. El Servicio se ofrece bajo un modelo de suscripción con mejora continua. Pueden presentarse actualizaciones frecuentes y cambios funcionales.
+8.2. Precio del plan EMPRENDE: $49.900 COP/mes o $499.000 COP/año (equivalente a 2 meses gratis) por comercio. Incluye acceso completo, soporte prioritario y actualizaciones. Los planes CRECE y EMPRESA estarán sujetos a las tarifas publicadas dentro del sistema.
 8.3. Los pagos son recurrentes. La cancelación puede realizarse en cualquier momento desde Configuración → Suscripción, sin penalizaciones.
 
 ## 9. SUSPENSIÓN Y TERMINACIÓN
 9.1. Kiosko Comercial se reserva el derecho de suspender el acceso en casos de: incumplimiento de estos términos, uso fraudulento, certificados revocados o solicitud de la DIAN.
-9.2. El Comerciante puede terminar el servicio en cualquier momento. Los datos podrán exportarse a formato CSV durante los 30 días posteriores a la cancelación.
+9.2. El Comerciante puede terminar el servicio en cualquier momento. Los datos podrán exportarse a formato CSV durante los 30 días posteriores a la cancelación, tras lo cual se eliminarán definitivamente, salvo las facturas y documentos contables que la ley ordena conservar durante los plazos establecidos por el Código de Comercio y el Estatuto Tributario.
 
 ## 10. LEY APLICABLE Y JURISDICCIÓN
 Estos Términos se rigen por las leyes de la República de Colombia. Cualquier controversia será resuelta ante los jueces competentes de la ciudad de Bogotá, mediante conciliación previa conforme a la Ley 640 de 2001.
