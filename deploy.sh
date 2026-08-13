@@ -1,13 +1,17 @@
 #!/bin/bash
-
 # ============================================================================
-# Kiosko Comercial - Script de Despliegue Profesional v3.0
-# Uso: ./deploy.sh [target] [environment]
-# Targets: all, hosting, functions, rules, cloud-run
-# Environments: prod, dev
+# Kiosko Comercial V3.5 - Script de Despliegue Multi-Target
+# ============================================================================
+# Uso: ./deploy.sh <target> <entorno>
+# Ejemplos:
+#   ./deploy.sh firebase dev        → Firebase development
+#   ./deploy.sh firebase prod       → Firebase production
+#   ./deploy.sh cloud-run dev       → Cloud Run development
+#   ./deploy.sh cloud-run prod      → Cloud Run production
+#   ./deploy.sh all prod            → Todo (Firebase + Cloud Run) production
 # ============================================================================
 
-set -e  # Detener ejecución en caso de error
+set -e
 
 # Colores para output
 RED='\033[0;31m'
@@ -18,147 +22,266 @@ NC='\033[0m' # No Color
 
 # Configuración
 PROJECT_ID="gen-lang-client-0213647704"
-SERVICE_NAME="kiosko-backend"
-REGION="us-central1"
+CLOUD_RUN_SERVICE="kiosko-backend"
+CLOUD_RUN_REGION="us-central1"
 
-# Parsear argumentos
-TARGET=${1:-all}
-ENVIRONMENT=${2:-prod}
+# Funciones de logging
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
 
-echo -e "${BLUE}[INFO] 🚀 Iniciando despliegue de Kiosko Comercial V3.0${NC}"
-echo -e "${BLUE}[INFO] 📦 Target: $TARGET | Entorno: $ENVIRONMENT | Proyecto: $PROJECT_ID${NC}"
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Validar argumentos
+if [ "$#" -lt 2 ]; then
+    log_error "Uso: ./deploy.sh <target> <entorno>"
+    echo ""
+    echo "Targets disponibles:"
+    echo "  firebase    - Despliega solo a Firebase (Hosting + Functions)"
+    echo "  cloud-run   - Despliega solo a Cloud Run (Backend)"
+    echo "  all         - Despliega a ambos (Firebase + Cloud Run)"
+    echo ""
+    echo "Entornos disponibles:"
+    echo "  dev         - Desarrollo"
+    echo "  prod        - Producción"
+    echo ""
+    echo "Ejemplos:"
+    echo "  ./deploy.sh cloud-run prod"
+    echo "  ./deploy.sh firebase dev"
+    echo "  ./deploy.sh all prod"
+    exit 1
+fi
+
+TARGET=$1
+ENV=$2
+
+# Validar target
+if [[ "$TARGET" != "firebase" && "$TARGET" != "cloud-run" && "$TARGET" != "all" ]]; then
+    log_error "Target inválido: $TARGET"
+    echo "Targets válidos: firebase, cloud-run, all"
+    exit 1
+fi
+
+# Validar entorno
+if [[ "$ENV" != "dev" && "$ENV" != "prod" ]]; then
+    log_error "Entorno inválido: $ENV"
+    echo "Entornos válidos: dev, prod"
+    exit 1
+fi
+
+log_info "🚀 Iniciando despliegue de Kiosko Comercial V3.5"
+log_info "📦 Target: $TARGET | Entorno: $ENV | Proyecto: $PROJECT_ID"
 
 # ============================================================================
 # VALIDACIONES PRE-VUELO
 # ============================================================================
-echo -e "${BLUE}[INFO] 🔍 Ejecutando validaciones pre-vuelo...${NC}"
+log_info "🔍 Ejecutando validaciones pre-vuelo..."
 
-# 1. TypeScript Check
-echo -e "${BLUE}[INFO] 🧹 Ejecutando TypeScript check...${NC}"
-npm run lint || echo -e "${YELLOW}[WARN] ⚠️ TypeScript check falló, pero continuaremos con el despliegue.${NC}"
-
-# 2. Build
-echo -e "${BLUE}[INFO] 🔨 Compilando frontend con Vite...${NC}"
-npm run build || {
-  echo -e "${RED}[ERROR] ❌ Build falló. Corregir errores antes de desplegar.${NC}"
-  exit 1
-}
-
-# 3. Validar variables de entorno para producción
-if [ "$ENVIRONMENT" = "prod" ]; then
-  echo -e "${BLUE}[INFO] 🔐 Validando variables de entorno para producción...${NC}"
-  
-  # Verificar si CERTIFICATE_PIN está configurado
-  if [ -z "$CERTIFICATE_PIN" ]; then
-    echo -e "${YELLOW}[WARN] ⚠️  CERTIFICATE_PIN debe estar configurado en Google Secret Manager${NC}"
-  fi
+# Verificar que estamos en la raíz del proyecto
+if [ ! -f "package.json" ]; then
+    log_error "No se encontró package.json. Asegúrate de estar en la raíz del proyecto."
+    log_error "Directorio actual: $(pwd)"
+    exit 1
 fi
 
-echo -e "${GREEN}[INFO] ✅ Validaciones pre-vuelo completadas.${NC}"
-
-# ============================================================================
-# FUNCIONES DE DESPLIEGUE
-# ============================================================================
-
-deploy_hosting() {
-  echo -e "${BLUE}[INFO] 🌐 Desplegando Firebase Hosting...${NC}"
-  npx firebase deploy --only hosting --project $PROJECT_ID || {
-    echo -e "${RED}[ERROR] ❌ Falló el despliegue de Hosting${NC}"
-    return 1
-  }
-  echo -e "${GREEN}[INFO] ✅ Hosting desplegado exitosamente${NC}"
-}
-
-deploy_functions() {
-  echo -e "${BLUE}[INFO] ⚡ Desplegando Cloud Functions...${NC}"
-  npx firebase deploy --only functions --project $PROJECT_ID || {
-    echo -e "${RED}[ERROR] ❌ Falló el despliegue de Functions${NC}"
-    return 1
-  }
-  echo -e "${GREEN}[INFO] ✅ Functions desplegadas exitosamente${NC}"
-}
-
-deploy_rules() {
-  echo -e "${BLUE}[INFO] 🔒 Desplegando reglas de Firestore...${NC}"
-  npx firebase deploy --only firestore:rules --project $PROJECT_ID || {
-    echo -e "${YELLOW}[WARN] ⚠️  No se pudieron desplegar las reglas de Firestore${NC}"
-  }
-  
-  echo -e "${BLUE}[INFO] 📦 Desplegando reglas de Storage...${NC}"
-  npx firebase deploy --only storage --project $PROJECT_ID || {
-    echo -e "${YELLOW}[WARN] ⚠️  No se pudieron desplegar las reglas de Storage. Esto ocurre si no has habilitado Firebase Storage en la consola web de tu proyecto ($PROJECT_ID). Puedes habilitarlo en https://console.firebase.google.com/ y reintentar. Continuando con el despliegue...${NC}"
-  }
-  
-  echo -e "${GREEN}[INFO] ✅ Reglas desplegadas${NC}"
-}
-
-deploy_cloud_run() {
-  echo -e "${BLUE}[INFO] 🐳 Desplegando backend en Cloud Run...${NC}"
-  
-  # Verificar si Dockerfile existe
-  if [ ! -f "Dockerfile" ]; then
-    echo -e "${RED}[ERROR] ❌ No se encontró el archivo Dockerfile. Crear Dockerfile antes de desplegar a Cloud Run.${NC}"
+# Verificar TypeScript
+log_info "🧹 Ejecutando TypeScript check..."
+npm run lint
+if [ $? -ne 0 ]; then
+    log_error "TypeScript check falló. Corrige los errores antes de desplegar."
     exit 1
-  fi
-  
-  gcloud run deploy $SERVICE_NAME \
-    --source . \
-    --project $PROJECT_ID \
-    --region $REGION \
-    --platform managed \
-    --allow-unauthenticated \
-    --clear-base-image \
-    --set-env-vars="NODE_ENV=production,FIREBASE_PROJECT_ID=$PROJECT_ID" \
-    --memory=512Mi \
-    --cpu=1 \
-    --timeout=300 \
-    --min-instances=0 \
-    --max-instances=10 || {
-    echo -e "${RED}[ERROR] ❌ Falló el despliegue a Cloud Run${NC}"
-    return 1
-  }
-  
-  echo -e "${GREEN}[INFO] ✅ Cloud Run desplegado exitosamente${NC}"
+fi
+
+# Compilar frontend
+log_info "🔨 Compilando frontend con Vite..."
+npm run build
+if [ $? -ne 0 ]; then
+    log_error "Build falló. Corrige los errores antes de desplegar."
+    exit 1
+fi
+
+# Validar variables de entorno para producción
+if [ "$ENV" == "prod" ]; then
+    log_info "🔐 Validando variables de entorno para producción..."
+    
+    # Verificar que CERTIFICATE_PIN esté en Secret Manager
+    if ! gcloud secrets describe certificate-pin --project=$PROJECT_ID &> /dev/null; then
+        log_warn "⚠️  CERTIFICATE_PIN debe estar configurado en Google Secret Manager"
+    fi
+fi
+
+log_success "✅ Validaciones pre-vuelo completadas."
+
+# ============================================================================
+# DESPLIEGUE A CLOUD RUN
+# ============================================================================
+deploy_cloud_run() {
+    log_info "🐳 Desplegando backend en Cloud Run..."
+    
+    # Verificar que gcloud está instalado
+    if ! command -v gcloud &> /dev/null; then
+        log_error "gcloud CLI no está instalado. Instala Google Cloud SDK:"
+        echo "  https://cloud.google.com/sdk/docs/install"
+        exit 1
+    fi
+    
+    # Verificar autenticación
+    if ! gcloud auth print-access-token &> /dev/null; then
+        log_error "No estás autenticado con gcloud. Ejecuta:"
+        echo "  gcloud auth login"
+        exit 1
+    fi
+    
+    # Configurar proyecto
+    gcloud config set project $PROJECT_ID
+    
+    # Verificar que Dockerfile existe (búsqueda mejorada)
+    DOCKERFILE_PATH=""
+    if [ -f "./Dockerfile" ]; then
+        DOCKERFILE_PATH="./Dockerfile"
+    elif [ -f "Dockerfile" ]; then
+        DOCKERFILE_PATH="Dockerfile"
+    else
+        log_error "No se encontró Dockerfile en el directorio actual"
+        log_error "Directorio actual: $(pwd)"
+        log_error "Archivos en el directorio:"
+        ls -la | grep -i docker || echo "  (No hay archivos con 'docker' en el nombre)"
+        log_info ""
+        log_info "💡 Soluciones:"
+        log_info "  1. Crea un archivo Dockerfile en la raíz del proyecto"
+        log_info "  2. Verifica que el archivo se llame exactamente 'Dockerfile' (con D mayúscula)"
+        exit 1
+    fi
+    
+    log_success "✅ Dockerfile encontrado en: $DOCKERFILE_PATH"
+    
+    # Build y push a Artifact Registry
+    log_info "🔨 Construyendo imagen Docker..."
+    
+    IMAGE_TAG="gcr.io/$PROJECT_ID/$CLOUD_RUN_SERVICE:$(date +%Y%m%d-%H%M%S)"
+    
+    docker build -t $IMAGE_TAG -f $DOCKERFILE_PATH .
+    if [ $? -ne 0 ]; then
+        log_error "Docker build falló."
+        exit 1
+    fi
+    
+    log_info "📤 Subiendo imagen a Artifact Registry..."
+    docker push $IMAGE_TAG
+    if [ $? -ne 0 ]; then
+        log_error "Docker push falló. Verifica que Artifact Registry esté habilitado."
+        exit 1
+    fi
+    
+    # Desplegar a Cloud Run
+    log_info "🚀 Desplegando en Cloud Run..."
+    
+    gcloud run deploy $CLOUD_RUN_SERVICE \
+        --image $IMAGE_TAG \
+        --platform managed \
+        --region $CLOUD_RUN_REGION \
+        --allow-unauthenticated \
+        --memory 1Gi \
+        --cpu 1 \
+        --min-instances 0 \
+        --max-instances 10 \
+        --set-env-vars "NODE_ENV=$ENV,GOOGLE_CLOUD_PROJECT=$PROJECT_ID" \
+        --port 8080 \
+        --timeout 300
+    
+    if [ $? -ne 0 ]; then
+        log_error "Despliegue a Cloud Run falló."
+        exit 1
+    fi
+    
+    log_success "✅ Cloud Run desplegado exitosamente"
+    
+    # Mostrar URL del servicio
+    SERVICE_URL=$(gcloud run services describe $CLOUD_RUN_SERVICE \
+        --region $CLOUD_RUN_REGION \
+        --format 'value(status.url)')
+    
+    log_info "🔗 URL del servicio: $SERVICE_URL"
+}
+
+# ============================================================================
+# DESPLIEGUE A FIREBASE
+# ============================================================================
+deploy_firebase() {
+    log_info "🔥 Desplegando en Firebase..."
+    
+    # Verificar que firebase-tools está instalado
+    if ! command -v firebase &> /dev/null; then
+        log_error "firebase-tools no está instalado. Ejecuta:"
+        echo "  npm install -g firebase-tools"
+        exit 1
+    fi
+    
+    # Seleccionar proyecto
+    if [ "$ENV" == "prod" ]; then
+        FIREBASE_PROJECT="gen-lang-client-0213647704"
+    else
+        FIREBASE_PROJECT="gen-lang-client-0213647704-dev"
+    fi
+    
+    log_info "📦 Proyecto Firebase: $FIREBASE_PROJECT"
+    
+    # Desplegar Firestore rules
+    log_info "📜 Desplegando reglas de Firestore..."
+    firebase deploy --only firestore:rules --project $FIREBASE_PROJECT
+    
+    # Desplegar Storage rules
+    log_info "📦 Desplegando reglas de Storage..."
+    firebase deploy --only storage:rules --project $FIREBASE_PROJECT
+    
+    # Desplegar Hosting
+    log_info "🌐 Desplegando Hosting..."
+    firebase deploy --only hosting --project $FIREBASE_PROJECT
+    
+    log_success "✅ Firebase desplegado exitosamente"
 }
 
 # ============================================================================
 # EJECUCIÓN PRINCIPAL
 # ============================================================================
-
 case $TARGET in
-  all)
-    deploy_rules
-    deploy_functions
-    deploy_hosting
-    echo -e "${BLUE}[INFO] 💡 Para desplegar backend en Cloud Run, usa: ./deploy.sh cloud-run${NC}"
-    ;;
-  hosting)
-    deploy_hosting
-    ;;
-  functions)
-    deploy_functions
-    ;;
-  rules)
-    deploy_rules
-    ;;
-  cloud-run)
-    deploy_cloud_run
-    ;;
-  *)
-    echo -e "${RED}[ERROR] ❌ Target no válido: $TARGET${NC}"
-    echo -e "${YELLOW}[INFO] Targets disponibles: all, hosting, functions, rules, cloud-run${NC}"
-    exit 1
-    ;;
+    "cloud-run")
+        deploy_cloud_run
+        ;;
+    "firebase")
+        deploy_firebase
+        ;;
+    "all")
+        deploy_cloud_run
+        deploy_firebase
+        ;;
 esac
 
-# ============================================================================
-# MENSAJE FINAL
-# ============================================================================
+log_success "🎉 ¡Despliegue completado exitosamente!"
+log_info ""
+log_info "📊 Resumen:"
+log_info "  Target: $TARGET"
+log_info "  Entorno: $ENV"
+log_info "  Proyecto: $PROJECT_ID"
+log_info ""
 
-echo -e "${GREEN}[INFO] 🎉 ¡Despliegue completado exitosamente!${NC}"
-echo -e "${GREEN}[INFO] 🔗 Frontend: https://$PROJECT_ID.web.app${NC}"
-echo -e "${GREEN}[INFO] 🔗 API: https://$REGION-$PROJECT_ID.cloudfunctions.net/kiosko_api${NC}"
-
-if [ "$TARGET" = "cloud-run" ] || [ "$TARGET" = "all" ]; then
-  echo -e "${GREEN}[INFO] 🔗 Cloud Run: https://$SERVICE_NAME-$(echo $PROJECT_ID | cut -c1-10).a.run.app${NC}"
+if [ "$TARGET" == "cloud-run" ] || [ "$TARGET" == "all" ]; then
+    log_info "🔗 Backend URL: https://$CLOUD_RUN_SERVICE-$(echo $PROJECT_ID | tr '_' '-').a.run.app"
 fi
+
+if [ "$TARGET" == "firebase" ] || [ "$TARGET" == "all" ]; then
+    log_info "🔗 Frontend URL: https://$PROJECT_ID.web.app"
+fi
+
+log_info ""
+log_info "✅ ¡Kiosko Comercial V3.5 está live en producción!"
