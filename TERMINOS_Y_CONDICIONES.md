@@ -56,7 +56,7 @@ Estos Términos se rigen por las leyes de la República de Colombia. Cualquier c
 
 ## 11. CONTACTO
 - 📧 soporte@kioskocomercial.com
-- 📱 WhatsApp: +57 300 123 4567
+- 📱 WhatsApp: +57 3247804513
 - Colombia
 
 Al hacer clic en "Aceptar" o utilizar el Servicio, el Comerciante confirma haber leído, comprendido y aceptado estos Términos en su totalidad.
