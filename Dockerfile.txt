@@ -1,6 +1,6 @@
 # ============================================================================
-# Kiosko Comercial V3.0 - Dockerfile para Cloud Run
-# Usa server.cloudrun.ts (servidor minimalista SIN Vite)
+# Kiosko Comercial V3.5 - Dockerfile para Cloud Run
+# Multi-stage build optimizado para producción
 # ============================================================================
 
 # Etapa 1: Build
@@ -17,11 +17,11 @@ RUN npm ci
 # Copiar código fuente completo
 COPY . .
 
-# Compilar frontend (necesario para que el build no falle)
+# Compilar frontend y backend
 RUN npm run build
 
 # ============================================================================
-# Etapa 2: Producción
+# Etapa 2: Producción (imagen mínima)
 # ============================================================================
 FROM node:22-alpine AS production
 
@@ -31,21 +31,21 @@ WORKDIR /app
 COPY package*.json ./
 
 # Instalar solo dependencias de producción
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev && npm cache clean --force
 
-# Copiar build generado
+# Copiar build generado desde etapa builder
 COPY --from=builder /app/dist ./dist
 
-# Variables de entorno
+# Variables de entorno para Cloud Run
 ENV NODE_ENV=production
 ENV PORT=8080
 
-# Exponer puerto
+# Puerto que Cloud Run usa
 EXPOSE 8080
 
-# Health check con tiempo generoso de inicio
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+# Health check optimizado para Cloud Run
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:8080/api/health || exit 1
 
-# Comando de inicio - USAR node dist/server.cjs
+# Comando de inicio
 CMD ["node", "dist/server.cjs"]
