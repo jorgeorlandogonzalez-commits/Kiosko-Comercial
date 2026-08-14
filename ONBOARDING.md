@@ -187,7 +187,7 @@ Abajo a la derecha verás un botón con la cara de **Don J**, tu asistente intel
 
 - 📱 **WhatsApp Directo:** +57 3247804513 *(Respuesta < 2h hábiles)*
 - 📧 **Correo:** soporte@kioskocomercial.com *(Temas no urgentes)*
-- 🕐 **Horario:** Lunes a Sábado, 8:00 AM - 6:00 PM (COL)
+- 🕐 **Horario:** Lunes a Viernes 8:00 AM - 5:00 PM · Sábados 8:00 AM - 12:00 M · Domingos y festivos no laboramos
 
 ### 🛡️ Tus Datos Están Protegidos
 

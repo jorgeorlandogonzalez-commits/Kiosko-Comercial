@@ -321,7 +321,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onTermin
       </section>
 
       {/* Widget WhatsApp */}
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-6 left-6 z-50">
         {showWidget ? (
           <div className="bg-white p-6 rounded-3xl shadow-2xl border border-gray-100 w-72 mb-4 relative animate-in slide-in-from-bottom-4">
             <button 
@@ -331,7 +331,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onTermin
               <X size={20} />
             </button>
             <h4 className="font-black text-brand-black text-lg mb-2 pr-6">¿Tienes dudas? Te ayudamos con amor</h4>
-            <p className="text-gray-500 text-sm font-medium mb-6">Horario de soporte:<br/>Lunes a Sábado, 8:00 AM - 6:00 PM (COL)</p>
+            <p className="text-gray-500 text-sm font-medium mb-6">Horario de soporte:<br/>Lunes a Viernes 8:00 AM - 5:00 PM · Sábados 8:00 AM - 12:00 M · Domingos y festivos no laboramos</p>
             <a 
               href={`https://wa.me/${SOPORTE_WHATSAPP}`}
               target="_blank"
@@ -353,7 +353,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onTermin
       </div>
 
       {/* Footer */}
-      <footer className="bg-gray-100 py-12 px-6 border-t border-gray-200">
+      <footer className="bg-gray-100 pt-12 pb-24 md:pb-28 px-6 border-t border-gray-200">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2">
             <Store size={20} className="text-gray-400" />
