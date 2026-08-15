@@ -132,6 +132,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onTermin
         <div className="relative">
           <div className="absolute inset-0 bg-gradient-to-tr from-brand-red/20 to-transparent rounded-3xl transform rotate-3 scale-105 -z-10"></div>
           <PosPreview />
+          <div className="mt-8 flex justify-center w-full">
+            <a href="/demo" className="inline-flex items-center gap-2 bg-white text-brand-black border-2 border-gray-200 px-8 py-4 rounded-xl font-bold text-lg hover:border-brand-red hover:shadow-md transition-all active:scale-95 text-center">
+              👉 Tócalo sin registrarte
+            </a>
+          </div>
         </div>
       </section>
 
@@ -359,7 +364,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onTermin
             <Store size={20} className="text-gray-400" />
             <span className="font-black text-gray-400 tracking-widest uppercase text-xs">Kiosko Comercial © 2026</span>
           </div>
-          <div className="flex items-center gap-6 text-sm font-bold text-gray-500">
+          <div className="flex flex-wrap justify-center md:justify-end items-center gap-6 text-sm font-bold text-gray-500">
+            <a href="/demo" className="hover:text-brand-red transition-colors">Tienda de ejemplo</a>
+            <a href="/testimonios" className="hover:text-brand-red transition-colors">Testimonios</a>
             <button onClick={onTerminosClick} className="hover:text-brand-red transition-colors cursor-pointer outline-none">Términos y Condiciones</button>
             <button onClick={onHabilitadorClick} className="hover:text-brand-red transition-colors cursor-pointer outline-none">Software Habilitador DIAN</button>
             <a href="https://wa.me/573247804513" target="_blank" rel="noopener noreferrer" className="hover:text-brand-red transition-colors">Soporte WhatsApp</a>

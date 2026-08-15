@@ -20,6 +20,8 @@ import { PricingPlans } from './components/PricingPlans';
 import { LandingPage } from './components/LandingPage';
 import { HabilitadorPage } from './components/HabilitadorPage';
 import { TerminosPage } from './components/TerminosPage';
+import { DemoPOS } from './components/DemoPOS';
+import { TestimoniosPage } from './components/TestimoniosPage';
 import { Invoice, StoreSettings, CreditAccount, Order, Quote, Operator, CreditTransaction, CreditDebt, Product, KardexEntry, PaymentMethod, SupplierAccount, Customer, Supplier, Subscription, PlanTier, SubscriptionStatus, Expense } from './types';
 import { dbService, initDbService, logoutDbService } from './services/storageService';
 import { getColombiaISO } from './services/dianService';
@@ -41,7 +43,13 @@ function MainApp() {
   const [currentUser, setCurrentUser] = useState<Operator | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
-  const [currentExternalView, setCurrentExternalView] = useState<'LANDING' | 'HABILITADOR' | 'TERMINOS'>('LANDING');
+  const [currentExternalView, setCurrentExternalView] = useState<'LANDING' | 'HABILITADOR' | 'TERMINOS' | 'DEMO' | 'TESTIMONIOS'>(() => {
+    const path = window.location.pathname;
+    if (path === '/demo') return 'DEMO';
+    if (path === '/testimonios') return 'TESTIMONIOS';
+    if (path === '/terminos') return 'TERMINOS';
+    return 'LANDING';
+  });
 
   // Estados SaaS
   const [showPricing, setShowPricing] = useState(false);
@@ -1543,6 +1551,12 @@ function MainApp() {
         )}
         {currentExternalView === 'TERMINOS' && (
           <TerminosPage onBackToApp={() => setCurrentExternalView('LANDING')} />
+        )}
+        {currentExternalView === 'DEMO' && (
+          <DemoPOS />
+        )}
+        {currentExternalView === 'TESTIMONIOS' && (
+          <TestimoniosPage />
         )}
         {showLoginModal && (
           <LoginModal 

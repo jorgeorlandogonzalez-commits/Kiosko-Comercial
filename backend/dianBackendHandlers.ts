@@ -2,7 +2,9 @@
 // ✅ PRODUCCIÓN REAL: Firma digital, XML UBL 2.1, transmisión DIAN/PT
 
 import express from "express";
+import admin from "firebase-admin";
 import { getAuth } from "firebase-admin/auth";
+import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { createHash, randomUUID } from "crypto";
 import { z } from "zod";
@@ -590,6 +592,15 @@ export const dianTransmitHandler = async (req: express.Request, res: express.Res
         cufe: cufe.substring(0, 16) + '...',
         duration: `${duration}ms`
       }, '🎉 Factura APROBADA por la DIAN');
+
+      try {
+        await getFirestore(admin.app(), "ai-studio-745f93d7-7ad5-4ca5-ac57-45443e5e4b15").doc("platform/stats").set(
+          { facturasEmitidas: admin.firestore.FieldValue.increment(1), ultimaActualizacion: new Date().toISOString() },
+          { merge: true }
+        );
+      } catch (e) {
+        logger.warn({ err: e }, "No se pudo incrementar contador público de facturas.");
+      }
       
       return res.json({
         success: true,

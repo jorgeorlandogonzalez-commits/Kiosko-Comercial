@@ -79,6 +79,15 @@ const assistantLimit = rateLimit({
 });
 
 // API Routes
+app.get("/api/stats/public", async (req, res) => {
+  try {
+    const snap = await getFirestore(admin.app(), "ai-studio-745f93d7-7ad5-4ca5-ac57-45443e5e4b15").doc("platform/stats").get();
+    res.json({ facturasEmitidas: snap.exists ? (snap.data()?.facturasEmitidas ?? 0) : 0 });
+  } catch (err) {
+    res.json({ facturasEmitidas: 0 });
+  }
+});
+
 app.get("/api/health", (req, res) => {
   res.json({ 
     status: "ok", 
