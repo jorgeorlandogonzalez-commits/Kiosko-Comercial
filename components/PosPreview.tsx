@@ -1,7 +1,37 @@
 import React from 'react';
 import { Store, CheckCircle2 } from 'lucide-react';
 
-export const PosPreview: React.FC = () => {
+export const PosPreview: React.FC<{ variant?: 'default' | 'ferreteria' | 'panaderia' }> = ({ variant = 'default' }) => {
+  const productsByVariant = {
+    default: [
+      { name: "Pan", price: "$1.500" },
+      { name: "Leche", price: "$4.000" },
+      { name: "Café", price: "$3.000" },
+      { name: "Gaseosa", price: "$2.500" }
+    ],
+    ferreteria: [
+      { name: "Martillo", price: "$25.000" },
+      { name: "Tornillos x10", price: "$3.000" },
+      { name: "Pintura 1 gal", price: "$45.000" },
+      { name: "Cemento", price: "$38.000" }
+    ],
+    panaderia: [
+      { name: "Pan", price: "$1.500" },
+      { name: "Torta de chocolate", price: "$8.000" },
+      { name: "Café", price: "$3.000" },
+      { name: "Gaseosa", price: "$2.500" }
+    ]
+  };
+
+  const totalsByVariant = {
+    default: "$11.000",
+    ferreteria: "$111.000",
+    panaderia: "$15.000"
+  };
+
+  const currentProducts = productsByVariant[variant];
+  const currentTotal = totalsByVariant[variant];
+
   return (
     <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col h-[500px] w-full transform md:rotate-2">
       {/* Header */}
@@ -21,9 +51,9 @@ export const PosPreview: React.FC = () => {
       {/* Body */}
       <div className="flex-1 p-6 flex flex-col justify-between bg-gray-50/50">
         <div className="grid grid-cols-2 gap-4">
-          {[{ name: "Pan", price: "$1.500" }, { name: "Leche", price: "$4.000" }, { name: "Café", price: "$3.000" }, { name: "Gaseosa", price: "$2.500" }].map((item, i) => (
+          {currentProducts.map((item, i) => (
             <div key={i} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center gap-2 hover:border-brand-red transition-colors cursor-pointer">
-              <span className="font-bold text-gray-700">{item.name}</span>
+              <span className="font-bold text-gray-700 text-center">{item.name}</span>
               <span className="text-brand-red font-black text-sm">{item.price}</span>
             </div>
           ))}
@@ -32,7 +62,7 @@ export const PosPreview: React.FC = () => {
         <div className="mt-6">
           <div className="bg-white p-4 rounded-xl border border-gray-200 mb-4 flex justify-between items-center shadow-sm">
             <span className="font-bold text-gray-500 uppercase tracking-widest text-xs">Total:</span>
-            <span className="font-black text-2xl text-brand-black">$11.000</span>
+            <span className="font-black text-2xl text-brand-black">{currentTotal}</span>
           </div>
           <button className="w-full bg-brand-red text-white py-4 rounded-xl font-black uppercase tracking-widest text-sm hover:bg-red-700 transition-all shadow-lg shadow-brand-red/20">
             Cobrar

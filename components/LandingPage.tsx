@@ -12,13 +12,18 @@ interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onTerminosClick, onHabilitadorClick }) => {
-  const [isAnnual, setIsAnnual] = useState(false);
-  const [showWidget, setShowWidget] = useState(false);
+  const path = typeof window !== 'undefined' ? window.location.pathname : '';
+  let variant: 'default' | 'ferreteria' | 'panaderia' = 'default';
+  if (path === '/para/ferreterias') variant = 'ferreteria';
+  if (path === '/para/panaderias') variant = 'panaderia';
 
-  const path = window.location.pathname;
   const isTiendas = path === '/para/tiendas';
   const isPanaderias = path === '/para/panaderias';
   const isFerreterias = path === '/para/ferreterias';
+
+  const [isAnnual, setIsAnnual] = useState(false);
+  const [showWidget, setShowWidget] = useState(false);
+
   const isVertical = isTiendas || isPanaderias || isFerreterias;
 
   let documentTitle = "Kiosko Comercial";
@@ -131,7 +136,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onTermin
         </div>
         <div className="relative">
           <div className="absolute inset-0 bg-gradient-to-tr from-brand-red/20 to-transparent rounded-3xl transform rotate-3 scale-105 -z-10"></div>
-          <PosPreview />
+          <PosPreview variant={variant} />
           <div className="mt-8 flex justify-center w-full">
             <a href="/demo" className="inline-flex items-center gap-2 bg-white text-brand-black border-2 border-gray-200 px-8 py-4 rounded-xl font-bold text-lg hover:border-brand-red hover:shadow-md transition-all active:scale-95 text-center">
               👉 Tócalo sin registrarte
