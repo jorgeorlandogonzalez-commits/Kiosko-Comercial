@@ -187,14 +187,14 @@ function MainApp() {
           const verifyData = await verifyRes.json();
           if (verifyData.success) {
             const { db } = await import('./firebase');
-            const { doc, updateDoc, serverTimestamp } = await import('firebase/firestore');
+            const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
             
-            await updateDoc(doc(db, 'subscriptions', currentUser.id), {
+            await setDoc(doc(db, 'subscriptions', currentUser.id), {
               status: 'active',
               signature: verifyData.signature,
               transactionId: transactionId,
               paidAt: serverTimestamp(),
-            });
+            }, { merge: true });
             
             alert("¡Pago validado exitosamente! Bienvenido de nuevo.");
             setIsSubscriptionExpired(false);
@@ -209,6 +209,35 @@ function MainApp() {
       }
     };
     verifyWompiRedirect();
+  }, [currentUser]);
+
+  // AUTO-RECOVERY PARA INFO ALIAT (Pago atascado)
+  useEffect(() => {
+    const recoverSubscription = async () => {
+      if (currentUser?.email?.toLowerCase() === 'info.empresasaliat@gmail.com') {
+         try {
+           const { db } = await import('./firebase');
+           const { doc, getDoc, setDoc, serverTimestamp } = await import('firebase/firestore');
+           const subDoc = await getDoc(doc(db, 'subscriptions', currentUser.id));
+           
+           if (!subDoc.exists() || subDoc.data().status !== 'active') {
+               await setDoc(doc(db, 'subscriptions', currentUser.id), {
+                   status: 'active',
+                   transactionId: '1205076-1787532320-81839',
+                   paidAt: serverTimestamp(),
+                   plan: 'PRO'
+               }, { merge: true });
+               alert("Hemos sincronizado tu pago de forma exitosa. ¡Gracias por confiar en Kiosko Comercial!");
+               window.location.reload();
+           }
+         } catch (e) {
+           console.error("Error recovering subscription", e);
+         }
+      }
+    };
+    if (currentUser) {
+       recoverSubscription();
+    }
   }, [currentUser]);
 
   // VALIDACIÓN DE SUSCRIPCIÓN AL INICIAR
