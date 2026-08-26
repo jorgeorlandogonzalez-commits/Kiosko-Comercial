@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { auth } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -161,18 +160,22 @@ function MainApp() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [loadAllData]);
 
-  // VERIFICAR REDIRECT DE WOMPI
+  // VERIFICAR REDIRECT DE WOMPI (el backend activa la suscripción; el frontend solo confirma)
   useEffect(() => {
     const verifyWompiRedirect = async () => {
       if (!currentUser?.id) return;
       const urlParams = new URLSearchParams(window.location.search);
-      const transactionId = urlParams.get('id');
-      const env = urlParams.get('env');
-      
+      const pendingRaw = (() => { try { return localStorage.getItem('kiosko_pending_payment'); } catch { return null; } })();
+      let transactionId = urlParams.get('id') || urlParams.get('transactionId');
+      if (!transactionId && pendingRaw) { try { transactionId = JSON.parse(pendingRaw).txId; } catch { transactionId = null; } }
+      const fromUrl = !!(urlParams.get('id') || urlParams.get('transactionId'));
+
       if (transactionId) {
+        // Persistir pending ANTES de verificar (reintento seguro al próximo login)
+        try { localStorage.setItem('kiosko_pending_payment', JSON.stringify({ txId: transactionId, ts: Date.now() })); } catch { /* noop */ }
         // Limpiar URL para que no vuelva a verificar si recarga
         window.history.replaceState({}, document.title, window.location.pathname);
-        
+
         try {
           const token = await auth.currentUser?.getIdToken();
           const verifyRes = await fetch('/api/payments/verify', {
@@ -183,25 +186,18 @@ function MainApp() {
             },
             body: JSON.stringify({ transactionId })
           });
-          
+
           const verifyData = await verifyRes.json();
           if (verifyData.success) {
-            const { db } = await import('./firebase');
-            const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
-            
-            await setDoc(doc(db, 'subscriptions', currentUser.id), {
-              status: 'active',
-              signature: verifyData.signature,
-              transactionId: transactionId,
-              paidAt: serverTimestamp(),
-            }, { merge: true });
-            
+            // El backend ya activó la suscripción con privilegios de admin.
+            try { localStorage.removeItem('kiosko_pending_payment'); } catch { /* noop */ }
             alert("¡Pago validado exitosamente! Bienvenido de nuevo.");
-            setIsSubscriptionExpired(false);
-            setShowPricing(false);
-            checkSubscriptionStatus();
+            window.history.replaceState({}, document.title, window.location.pathname);
+            window.location.reload();
+            return;
           } else {
-            alert("Error al validar el pago: " + verifyData.message);
+            if (fromUrl) alert("Error al validar el pago: " + verifyData.message);
+            else console.warn("Pago pending aún no aprobado:", verifyData.message);
           }
         } catch (e) {
           console.error("Error verificando redirección de pago", e);
@@ -209,35 +205,6 @@ function MainApp() {
       }
     };
     verifyWompiRedirect();
-  }, [currentUser]);
-
-  // AUTO-RECOVERY PARA INFO ALIAT (Pago atascado)
-  useEffect(() => {
-    const recoverSubscription = async () => {
-      if (currentUser?.email?.toLowerCase() === 'info.empresasaliat@gmail.com') {
-         try {
-           const { db } = await import('./firebase');
-           const { doc, getDoc, setDoc, serverTimestamp } = await import('firebase/firestore');
-           const subDoc = await getDoc(doc(db, 'subscriptions', currentUser.id));
-           
-           if (!subDoc.exists() || subDoc.data().status !== 'active') {
-               await setDoc(doc(db, 'subscriptions', currentUser.id), {
-                   status: 'active',
-                   transactionId: '1205076-1787532320-81839',
-                   paidAt: serverTimestamp(),
-                   plan: 'PRO'
-               }, { merge: true });
-               alert("Hemos sincronizado tu pago de forma exitosa. ¡Gracias por confiar en Kiosko Comercial!");
-               window.location.reload();
-           }
-         } catch (e) {
-           console.error("Error recovering subscription", e);
-         }
-      }
-    };
-    if (currentUser) {
-       recoverSubscription();
-    }
   }, [currentUser]);
 
   // VALIDACIÓN DE SUSCRIPCIÓN AL INICIAR
@@ -264,10 +231,11 @@ function MainApp() {
         if (subDoc.exists()) {
           const serverSub = subDoc.data();
           
+          const statusLower = String(serverSub.status || '').toLowerCase();
           let mappedStatus = 'TRIAL';
-          if (serverSub.status === 'active') {
+          if (statusLower === 'active') {
              mappedStatus = 'ACTIVE';
-          } else if (serverSub.status === 'expired') {
+          } else if (statusLower === 'expired') {
              mappedStatus = 'EXPIRED';
           } else {
              // Calculate if trial expired
@@ -937,80 +905,80 @@ function MainApp() {
   };
 
   const handleDeletePurchaseDocument = (batchId: string) => {
-    const ordersToDelete = orders.filter(o => {
-        const oBatchId = o.batchId || `legacy-${o.id}`;
-        return oBatchId === batchId;
-    });
-    if (ordersToDelete.length === 0) return;
+      const ordersToDelete = orders.filter(o => {
+          const oBatchId = o.batchId || `legacy-${o.id}`;
+          return oBatchId === batchId;
+      });
+      if (ordersToDelete.length === 0) return;
 
-    let currentProducts = [...products];
-    let batchTotal = 0;
-    const method = ordersToDelete[0].paymentMethod;
-    const supplierNit = ordersToDelete[0].supplierNit;
+      let currentProducts = [...products];
+      let batchTotal = 0;
+      const method = ordersToDelete[0].paymentMethod;
+      const supplierNit = ordersToDelete[0].supplierNit;
 
-    ordersToDelete.forEach(o => {
-        const subtotal = o.cost * o.quantity;
-        const discountVal = o.discount || 0;
-        const ivaVal = subtotal * (o.taxRate / 100);
-        const icVal = (o.consumptionTax || 0) * o.quantity;
-        batchTotal += (subtotal - discountVal) + ivaVal + icVal;
+      ordersToDelete.forEach(o => {
+          const subtotal = o.cost * o.quantity;
+          const discountVal = o.discount || 0;
+          const ivaVal = subtotal * (o.taxRate / 100);
+          const icVal = (o.consumptionTax || 0) * o.quantity;
+          batchTotal += (subtotal - discountVal) + ivaVal + icVal;
 
-        const pIndex = currentProducts.findIndex(p => p.id === o.productId);
-        if (pIndex !== -1) {
-            currentProducts[pIndex] = {
-                ...currentProducts[pIndex],
-                stock: currentProducts[pIndex].stock - o.quantity
-            };
-            
-            const entry: KardexEntry = {
-                id: `KDX-DEL-BUY-${Date.now()}-${o.productId}`,
-                date: getColombiaISO(),
-                productId: o.productId || '',
-                productName: o.productName,
-                type: 'AJUSTE_MANUAL',
-                quantity: -o.quantity,
-                balance: currentProducts[pIndex].stock,
-                reference: batchId,
-                note: `Reversión por anulación de compra ${batchId}`
-            };
-            dbService.saveKardexEntry(entry);
-        }
-    });
+          const pIndex = currentProducts.findIndex(p => p.id === o.productId);
+          if (pIndex !== -1) {
+              currentProducts[pIndex] = {
+                  ...currentProducts[pIndex],
+                  stock: currentProducts[pIndex].stock - o.quantity
+              };
+              
+              const entry: KardexEntry = {
+                  id: `KDX-DEL-BUY-${Date.now()}-${o.productId}`,
+                  date: getColombiaISO(),
+                  productId: o.productId || '',
+                  productName: o.productName,
+                  type: 'AJUSTE_MANUAL',
+                  quantity: -o.quantity,
+                  balance: currentProducts[pIndex].stock,
+                  reference: batchId,
+                  note: `Reversión por anulación de compra ${batchId}`
+              };
+              dbService.saveKardexEntry(entry);
+          }
+      });
 
-    setProducts(currentProducts);
-    dbService.saveProducts(currentProducts);
+      setProducts(currentProducts);
+      dbService.saveProducts(currentProducts);
 
-    if (method === PaymentMethod.CXP) {
-        const now = getColombiaISO();
-        const updatedAccounts = supplierAccounts.map(acc => {
-            if (acc.id === supplierNit) {
-                const tx: CreditTransaction = {
-                    id: `tx-cxp-del-${Date.now()}`,
-                    date: now,
-                    type: 'PAYMENT',
-                    amount: batchTotal,
-                    description: `Reversión por anulación de compra - Ref: ${batchId}`
-                };
-                return {
-                    ...acc,
-                    currentBalance: Math.max(0, acc.currentBalance - batchTotal),
-                    lastUpdated: now,
-                    history: [tx, ...acc.history]
-                };
-            }
-            return acc;
-        });
-        setSupplierAccounts(updatedAccounts);
-        dbService.saveSupplierAccounts(updatedAccounts);
-    }
+      if (method === PaymentMethod.CXP) {
+          const now = getColombiaISO();
+          const updatedAccounts = supplierAccounts.map(acc => {
+              if (acc.id === supplierNit) {
+                  const tx: CreditTransaction = {
+                      id: `tx-cxp-del-${Date.now()}`,
+                      date: now,
+                      type: 'PAYMENT',
+                      amount: batchTotal,
+                      description: `Reversión por anulación de compra - Ref: ${batchId}`
+                  };
+                  return {
+                      ...acc,
+                      currentBalance: Math.max(0, acc.currentBalance - batchTotal),
+                      lastUpdated: now,
+                      history: [tx, ...acc.history]
+                  };
+              }
+              return acc;
+          });
+          setSupplierAccounts(updatedAccounts);
+          dbService.saveSupplierAccounts(updatedAccounts);
+      }
 
-    const updatedOrders = orders.map(o => {
-        const oBatchId = o.batchId || `legacy-${o.id}`;
-        return oBatchId === batchId ? { ...o, status: 'ANULADO' as const } : o;
-    });
-    setOrders(updatedOrders);
-    dbService.saveOrders(updatedOrders);
-    setKardexEntries(dbService.getKardex());
+      const updatedOrders = orders.map(o => {
+          const oBatchId = o.batchId || `legacy-${o.id}`;
+          return oBatchId === batchId ? { ...o, status: 'ANULADO' as const } : o;
+      });
+      setOrders(updatedOrders);
+      dbService.saveOrders(updatedOrders);
+      setKardexEntries(dbService.getKardex());
   };
 
   const handleEditPurchaseDocument = (batchId: string, supplierName: string, supplierNit: string, newItems: any[], newMethod: PaymentMethod, newDate?: string, invoiceRef?: string) => {
@@ -1138,7 +1106,7 @@ function MainApp() {
             return acc;
         });
     }
-
+    
     // Si el nuevo método es CXP, agregar el nuevo saldo
     if (newMethod === PaymentMethod.CXP) {
         const existingAcc = updatedAccounts.find(s => s.id === supplierNit);
@@ -1233,7 +1201,6 @@ function MainApp() {
       }
       return acc;
     });
-
     setSupplierAccounts(updatedAccounts);
     dbService.saveSupplierAccounts(updatedAccounts);
     alert("Abono a proveedor editado correctamente.");
@@ -1255,10 +1222,8 @@ function MainApp() {
       }
       return acc;
     });
-
     setSupplierAccounts(updatedAccounts);
     dbService.saveSupplierAccounts(updatedAccounts);
-    alert("Abono a proveedor eliminado correctamente.");
   };
 
   const handleAddCategory = (newCat: string) => {
@@ -1362,7 +1327,7 @@ function MainApp() {
     const updatedAccounts = creditAccounts.map(acc => {
       if (acc.id === clientId) {
         const txToEdit = acc.history?.find(tx => tx.id === transactionId);
-        if (!txToEdit || txToEdit.type !== 'PAYMENT') return acc;
+        if (!txToEdit) return acc;
 
         const amountDifference = newAmount - txToEdit.amount;
         let updatedDebts = [...(acc.debts || [])];

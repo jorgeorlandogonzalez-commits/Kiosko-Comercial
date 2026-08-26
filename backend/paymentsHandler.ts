@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import pino from 'pino';
 import crypto from 'crypto';
+import { getApps, getApp, initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
 const logger = pino({ level: 'info' });
 
@@ -18,14 +20,19 @@ declare global {
 // Secretos
 const WOMPI_PRIVATE_KEY = process.env.WOMPI_PRIVATE_KEY_PROD || process.env.WOMPI_PRIVATE_KEY;
 const FIRESTORE_SIGNATURE_SECRET = 'KIOSKO_SECURE_PAYMENTS_2026';
+const FIRESTORE_DB_ID = 'ai-studio-745f93d7-7ad5-4ca5-ac57-45443e5e4b15';
+
+const getAdminDb = () => {
+  const app = getApps().length > 0 ? getApp() : initializeApp();
+  return getFirestore(app, FIRESTORE_DB_ID);
+};
 
 export const getWompiSignature = (req: Request, res: Response) => {
   const { reference, amountInCents, currency } = req.body;
-  const integritySecret = process.env.WOMPI_INTEGRITY_SECRET || process.env.WOMPI_INTEGRITY_SECRET_PROD || process.env.WOMPI_EVENT_SECRET; // Fallback to EVENT_SECRET for legacy
+  const integritySecret = process.env.WOMPI_INTEGRITY_SECRET || process.env.WOMPI_INTEGRITY_SECRET_PROD || process.env.WOMPI_EVENT_SECRET;
 
   if (!integritySecret) {
     logger.warn('Wompi integrity secret not found in environment');
-    // Si no hay evento configurado, devolvemos sin firma para no romper entornos locales que no usan validación
     res.json({ success: true, integrity: null });
     return;
   }
@@ -37,7 +44,6 @@ export const getWompiSignature = (req: Request, res: Response) => {
 
   const str = `${reference}${amountInCents}${currency}${integritySecret}`;
   const integrity = crypto.createHash('sha256').update(str).digest('hex');
-
   res.json({ success: true, integrity });
 };
 
@@ -69,13 +75,9 @@ export const verifyPaymentHandler = async (req: Request, res: Response) => {
 
     // 1. Consultar a Wompi Producción el estado real de la transacción
     const wompiUrl = `https://production.wompi.co/v1/transactions/${transactionId}`;
-    
-    // Si tienes node 18+, fetch es global, pero por compatibilidad intentamos usar global.fetch
     const response = await global.fetch(wompiUrl, {
       method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${WOMPI_PRIVATE_KEY}`
-      }
+      headers: { 'Authorization': `Bearer ${WOMPI_PRIVATE_KEY}` }
     });
 
     if (!response.ok) {
@@ -94,18 +96,40 @@ export const verifyPaymentHandler = async (req: Request, res: Response) => {
       return;
     }
 
-    // 3. Generar la firma criptográfica segura para que el frontend autorice la actualización
+    // 3. EL BACKEND ACTIVA LA SUSCRIPCIÓN (privilegios de admin, sin depender de rules del cliente)
+    const amountCents = Number(transaction.amount_in_cents || 0);
+    const isAnnual = amountCents >= 49900000; // $499.000 COP = anual
+    const now = new Date();
+    const next = new Date(now);
+    if (isAnnual) {
+      next.setFullYear(next.getFullYear() + 1);
+    } else {
+      next.setMonth(next.getMonth() + 1);
+    }
+
+    const db = getAdminDb();
+    await db.collection('subscriptions').doc(userId).set({
+      status: 'active',
+      plan: 'PRO',
+      transactionId: transactionId,
+      wompiTxId: transactionId,
+      paidAt: now.toISOString(),
+      nextBillingAt: next.toISOString(),
+      trialEndsAt: next.toISOString(),
+      amount: amountCents / 100,
+      currency: 'COP',
+      updatedAt: now.toISOString()
+    }, { merge: true });
+
+    logger.info({ userId, transactionId, source: 'verify' }, '✅ Suscripción activada por el backend');
+
+    // 4. Firma legacy para compatibilidad
     const signature = crypto
       .createHash('sha256')
       .update(userId + 'ACTIVE' + FIRESTORE_SIGNATURE_SECRET)
       .digest('hex');
 
-    logger.info({ message: 'Pago verificado exitosamente con Wompi LIVE', userId, transactionId });
-    
-    res.json({ 
-      success: true, 
-      signature 
-    });
+    res.json({ success: true, signature });
   } catch (error: any) {
     logger.error({ message: 'Error verificando pago', error: error.message });
     res.status(500).json({ success: false, message: 'Error interno verificando pago' });
