@@ -19,3 +19,12 @@ Para solucionar el error `PERMISSION_DENIED` en el backend (Cloud Run), se refac
 
 5. **Validación Inmediata (`components/SaaSCheckout.tsx`)**
    - Tras recibir un estado `APPROVED` de Wompi, el modal invoca `/api/payments/verify`, obtiene la firma segura y actualiza su propio documento de suscripción en tiempo real, brindando una experiencia "Offline-First" más robusta.
+
+## Rotación de modelo de Don J
+Ante futuros retiros de modelos por parte de Google, ya no es necesario desplegar código para mantener a Don J vivo. El asistente utiliza una cadena de respaldo que puede ser reconfigurada mediante variables de entorno. 
+
+Para rotar el modelo principal (o la cadena), ejecuta este comando desde la terminal local:
+```bash
+gcloud run services update kiosko-backend --region us-central1 --project gen-lang-client-0213647704 --update-env-vars DONJ_MODELS="modelo-a,modelo-b"
+```
+Los modelos deben estar separados por comas (por ejemplo: `"gemini-3.5-flash-lite,gemini-3.1-flash-lite"`). El asistente intentará en ese orden hasta que uno responda exitosamente.

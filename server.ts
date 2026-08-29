@@ -87,6 +87,8 @@ app.post("/api/payments/verify", verifyFirebaseToken, verifyPaymentHandler);
 app.post("/api/payments/signature", verifyFirebaseToken, getWompiSignature);
 app.get("/api/config/wompi", getWompiPublicKey);
 
+const DONJ_MODEL_CHAIN = (process.env.DONJ_MODELS || "gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-2.5-flash").split(",").map(s => s.trim()).filter(Boolean);
+
 app.post("/api/gemini/assistant", verifyFirebaseToken, assistantLimit, async (req, res) => {
   try {
     const uid = (req as any).user?.uid;
@@ -110,7 +112,7 @@ app.post("/api/gemini/assistant", verifyFirebaseToken, assistantLimit, async (re
       const profileSnap = await getFirestore(admin.app(), "ai-studio-745f93d7-7ad5-4ca5-ac57-45443e5e4b15").collection("users").doc(uid).get();
       if (profileSnap.exists) userRole = profileSnap.data()?.role ?? "OWNER";
     } catch (dbErr) {
-      // Silenciado en sandbox
+      logger.warn({ err: dbErr, uid }, "No se pudo leer perfil/plan desde Firestore, usando defaults.");
     }
 
     const enrichedContext = {
@@ -164,20 +166,38 @@ Eres DON J, el asistente digital de Kiosko Comercial. Tu personalidad es la de u
 Responde SIEMPRE en español colombiano, con calidez y precisión.
 `;
 
-    const aiClient = getGeminiClient();
-    const response = await aiClient.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: query,
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 0.7,
-        topP: 0.95,
-        topK: 40,
-        maxOutputTokens: 8192,
-      }
-    });
+    const genConfig = {
+      systemInstruction: SYSTEM_INSTRUCTION,
+      temperature: 0.7,
+      topP: 0.95,
+      topK: 40,
+      maxOutputTokens: 8192,
+    };
 
-    const text = response.text || "Lo siento, socio. ¿Podrías repetirme eso? Mi calculadora se bloqueó un momento.";
+    const aiClient = getGeminiClient();
+    let text = "";
+    let success = false;
+
+    for (const model of DONJ_MODEL_CHAIN) {
+      try {
+        const response = await aiClient.models.generateContent({
+          model,
+          contents: query,
+          config: genConfig
+        });
+        text = response.text || "Lo siento, socio. ¿Podrías repetirme eso? Mi calculadora se bloqueó un momento.";
+        logger.info({ model }, "Don J respondió con modelo");
+        success = true;
+        break;
+      } catch (err: any) {
+        logger.warn({ model, err: err.message }, "Fallo en modelo");
+      }
+    }
+
+    if (!success) {
+      throw new Error("Todos los modelos de la cadena fallaron.");
+    }
+
     res.json({ text });
 
   } catch (error: any) {
