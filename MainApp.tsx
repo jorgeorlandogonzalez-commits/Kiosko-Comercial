@@ -4,7 +4,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { Sidebar } from './components/Sidebar';
 import { HubVentas, HubInventario, HubDian, HubNumeros } from './components/Hubs';
 import { Customers } from './components/Customers';
-import { Menu, Sparkles } from 'lucide-react';
+import { Menu, Sparkles, ChevronLeft } from 'lucide-react';
 import { POS } from './components/POS';
 import { Inventory } from './components/Inventory';
 import { Dashboard } from './components/Dashboard';
@@ -46,6 +46,7 @@ function MainApp() {
   const [currentUser, setCurrentUser] = useState<Operator | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [currentExternalView, setCurrentExternalView] = useState<'LANDING' | 'HABILITADOR' | 'TERMINOS' | 'DEMO' | 'TESTIMONIOS'>(() => {
     const path = window.location.pathname;
     if (path === '/demo') return 'DEMO';
@@ -1582,6 +1583,29 @@ function MainApp() {
     );
   }
 
+  const getBreadcrumb = () => {
+    switch (activeTab) {
+      case 'pos':
+      case 'quotes':
+      case 'cxc':
+      case 'customers':
+        return { text: 'Ventas', target: 'hub-ventas' };
+      case 'inventory':
+      case 'orders':
+        return { text: 'Inventario', target: 'hub-inventario' };
+      case 'invoices':
+      case 'habilitador':
+        return { text: 'DIAN', target: 'hub-dian' };
+      case 'dashboard':
+      case 'reports':
+      case 'expenses':
+        return { text: 'Números', target: 'hub-numeros' };
+      default:
+        return null;
+    }
+  };
+  const breadcrumb = getBreadcrumb();
+
   return (
     <div className="flex h-screen bg-brand-black font-sans overflow-hidden"> 
       {/* SaaS Pricing Overlay */}
@@ -1591,7 +1615,19 @@ function MainApp() {
           </div>
       )}
 
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} onLogoutClick={() => signOut(auth)} storeSettings={storeSettings} isOpenMobile={isOpenMobile} setIsOpenMobile={setIsOpenMobile} />
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-brand-black/90 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full animate-in zoom-in-95 shadow-2xl">
+            <h3 className="text-xl font-black text-brand-black mb-4 text-center">¿Deseas salir del terminal?</h3>
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setShowLogoutModal(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-bold transition-colors">Cancelar</button>
+              <button onClick={() => { setShowLogoutModal(false); signOut(auth); }} className="flex-1 bg-brand-red hover:bg-red-700 text-white py-3 rounded-xl font-bold transition-colors">Salir</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} onLogoutClick={() => setShowLogoutModal(true)} storeSettings={storeSettings} isOpenMobile={isOpenMobile} setIsOpenMobile={setIsOpenMobile} />
       
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-gray-50">
         
@@ -1601,16 +1637,26 @@ function MainApp() {
             <button onClick={() => setIsOpenMobile(true)} className="md:hidden text-white p-2 hover:bg-white/10 rounded-lg">
               <Menu size={24} />
             </button>
-            <span className="font-black text-white text-lg md:hidden truncate">
-              {storeSettings?.name || "Kiosko"}
-            </span>
+            {breadcrumb ? (
+              <button 
+                onClick={() => setActiveTab(breadcrumb.target as any)}
+                className="text-white font-black uppercase hover:text-brand-red transition-colors flex items-center gap-1 h-11"
+              >
+                <ChevronLeft size={20} />
+                {breadcrumb.text}
+              </button>
+            ) : (
+              <span className="font-black text-white text-lg md:hidden truncate">
+                {storeSettings?.name || "Kiosko"}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => setIsGeminiOpen(true)} className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-xl font-black text-xs hover:scale-105 transition-all shadow-lg">
               <Sparkles size={16} /> <span className="hidden sm:inline">Don J</span>
             </button>
             {currentUser && (
-              <button onClick={() => signOut(auth)} className="md:hidden flex items-center justify-center w-10 h-10 bg-brand-red rounded-full text-white shadow-lg">
+              <button onClick={() => setShowLogoutModal(true)} className="md:hidden flex items-center justify-center w-10 h-10 bg-brand-red rounded-full text-white shadow-lg font-bold">
                 {currentUser.name.charAt(0)}
               </button>
             )}

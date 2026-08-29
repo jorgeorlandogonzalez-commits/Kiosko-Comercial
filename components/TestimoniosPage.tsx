@@ -61,11 +61,6 @@ export const TestimoniosPage: React.FC = () => {
           >
             <MessageCircle size={24} /> Enviar mi testimonio
           </a>
-          <div className="bg-white/10 rounded-xl p-4 inline-block mx-auto border border-white/5">
-            <p className="text-sm font-bold text-yellow-400">
-              🎁 Los primeros 10 comercios en compartir su experiencia reciben 3 meses gratis.
-            </p>
-          </div>
         </div>
       </div>
     </div>

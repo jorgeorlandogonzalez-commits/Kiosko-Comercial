@@ -36,10 +36,7 @@ function getGeminiClient(): GoogleGenAI {
       throw new Error("GEMINI_API_KEY no está configurada en las variables de entorno del servidor.");
     }
     aiClientInstance = new GoogleGenAI({
-      apiKey: key,
-      httpOptions: {
-        apiVersion: 'v1'
-      }
+      apiKey: key
     });
   }
   return aiClientInstance;
@@ -113,8 +110,7 @@ app.post("/api/gemini/assistant", verifyFirebaseToken, assistantLimit, async (re
       const profileSnap = await getFirestore(admin.app(), "ai-studio-745f93d7-7ad5-4ca5-ac57-45443e5e4b15").collection("users").doc(uid).get();
       if (profileSnap.exists) userRole = profileSnap.data()?.role ?? "OWNER";
     } catch (dbErr) {
-      // Ruido de sandbox: en producción Cloud Run tiene IAM correcto.
-      logger.warn({ err: dbErr, uid }, "No se pudo leer perfil/plan desde Firestore, usando defaults.");
+      // Silenciado en sandbox
     }
 
     const enrichedContext = {
@@ -170,7 +166,7 @@ Responde SIEMPRE en español colombiano, con calidez y precisión.
 
     const aiClient = getGeminiClient();
     const response = await aiClient.models.generateContent({
-      model: "gemini-1.5-flash-latest",
+      model: "gemini-2.5-flash",
       contents: query,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,

@@ -325,7 +325,7 @@ export const Quotes: React.FC<QuotesProps> = ({ quotes, onDeleteQuote, onRestore
                    <FileSpreadsheet size={64} className="text-gray-200"/>
                </div>
                <p className="text-3xl font-black text-gray-300 uppercase tracking-[0.3em]">Bandeja Vacía</p>
-               <p className="text-gray-400 mt-4 text-lg font-medium">Usa la opción "Cotizar" en el terminal de caja para generar una.</p>
+               <p className="text-gray-400 mt-4 text-lg font-medium">Usa la opción "Cotizar" en el Punto de Venta para generar una.</p>
            </div>
        ) : (
            <div className="space-y-6">

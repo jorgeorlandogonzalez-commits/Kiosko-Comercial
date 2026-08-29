@@ -1204,7 +1204,7 @@ export const POS: React.FC<POSProps> = ({
       <div className="flex-1 flex flex-col bg-white border-r border-gray-200 overflow-hidden">
         <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
           <h3 className="font-black text-xs uppercase flex items-center gap-2">
-            <ShoppingBag size={18} className="text-brand-red"/> Terminal de Caja 
+            <ShoppingBag size={18} className="text-brand-red"/> Punto de Venta 
             <span className="ml-2 bg-brand-black text-white px-2 py-0.5 rounded-full text-[9px]">{cartTotals.articles} Items</span>
           </h3>
           <div className="flex items-center gap-3">
