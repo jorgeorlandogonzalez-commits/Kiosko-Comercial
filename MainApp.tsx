@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { auth } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { Navbar } from './components/Navbar';
+import { Sidebar } from './components/Sidebar';
+import { HubVentas, HubInventario, HubDian, HubNumeros } from './components/Hubs';
+import { Customers } from './components/Customers';
+import { Menu, Sparkles } from 'lucide-react';
 import { POS } from './components/POS';
 import { Inventory } from './components/Inventory';
 import { Dashboard } from './components/Dashboard';
@@ -38,7 +41,8 @@ const DEFAULT_SETTINGS: StoreSettings = {
 };
 
 function MainApp() {
-  const [activeTab, setActiveTab] = useState('pos');
+  const [activeTab, setActiveTab] = useState('hub-ventas');
+  const [isOpenMobile, setIsOpenMobile] = useState(false);
   const [currentUser, setCurrentUser] = useState<Operator | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
@@ -277,7 +281,7 @@ function MainApp() {
       if (currentUser?.role !== 'ADMIN') {
           const restrictedTabs = ['settings', 'reports', 'expenses'];
           if (restrictedTabs.includes(activeTab)) {
-              setActiveTab('pos'); // Redirigir a caja si intenta acceder a una ruta prohibida
+              setActiveTab('pos'); // Redirigir a ventas si intenta acceder a una ruta prohibida
           }
       }
   }, [activeTab, currentUser]);
@@ -1579,14 +1583,40 @@ function MainApp() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-900 transition-all">
+    <div className="flex h-screen bg-brand-black font-sans overflow-hidden"> 
       {/* SaaS Pricing Overlay */}
       {showPricing && (
-          <PricingPlans onSelectPlan={handleSelectPlan} isTrialExpired={isSubscriptionExpired} isInTrial={trialDaysLeft !== null && trialDaysLeft > 0} onCancel={() => setShowPricing(false)} />
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-brand-black/90 backdrop-blur-sm p-4">
+              <PricingPlans onSelectPlan={handleSelectPlan} isTrialExpired={isSubscriptionExpired} isInTrial={trialDaysLeft !== null && trialDaysLeft > 0} onCancel={() => setShowPricing(false)} />
+          </div>
       )}
 
-      <div className="w-full h-full min-h-screen bg-gray-50 flex flex-col transition-all duration-300 ease-in-out relative">
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} onLogoutClick={() => signOut(auth)} storeSettings={storeSettings} isOpenMobile={isOpenMobile} setIsOpenMobile={setIsOpenMobile} />
+      
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative bg-gray-50">
         
+        {/* Topbar móvil y accesos rápidos */}
+        <div className="h-14 md:h-16 bg-brand-black border-b border-white/10 flex items-center justify-between px-4 shrink-0">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setIsOpenMobile(true)} className="md:hidden text-white p-2 hover:bg-white/10 rounded-lg">
+              <Menu size={24} />
+            </button>
+            <span className="font-black text-white text-lg md:hidden truncate">
+              {storeSettings?.name || "Kiosko"}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setIsGeminiOpen(true)} className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-xl font-black text-xs hover:scale-105 transition-all shadow-lg">
+              <Sparkles size={16} /> <span className="hidden sm:inline">Don J</span>
+            </button>
+            {currentUser && (
+              <button onClick={() => signOut(auth)} className="md:hidden flex items-center justify-center w-10 h-10 bg-brand-red rounded-full text-white shadow-lg">
+                {currentUser.name.charAt(0)}
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Banner de Periodo de Prueba o Suscripción SaaS */}
         {trialDaysLeft !== null && trialDaysLeft <= 15 && trialDaysLeft > 0 && (
             <div className={`text-white px-4 py-2 text-center text-xs font-bold uppercase tracking-widest flex justify-center items-center gap-2 relative z-50 shadow-md ${storeSettings.subscription?.status === 'ACTIVE' ? 'bg-orange-600' : 'bg-brand-black'}`}>
@@ -1602,16 +1632,13 @@ function MainApp() {
             </div>
         )}
 
-        <Navbar 
-          activeTab={activeTab} 
-          setActiveTab={setActiveTab} 
-          currentUser={currentUser} 
-          onLoginClick={() => {}} 
-          onLogoutClick={() => signOut(auth)} 
-          storeSettings={storeSettings}
-        />
         <main className="flex-1 overflow-hidden relative">
           <div className="absolute inset-0 overflow-y-auto no-scrollbar">
+              {activeTab === 'hub-ventas' && <HubVentas onNavigate={setActiveTab} />}
+              {activeTab === 'hub-inventario' && <HubInventario onNavigate={setActiveTab} />}
+              {activeTab === 'hub-dian' && <HubDian onNavigate={setActiveTab} />}
+              {activeTab === 'hub-numeros' && <HubNumeros onNavigate={setActiveTab} />}
+              {activeTab === 'customers' && <Customers customers={customers} onSaveCustomer={handleSaveCustomer} />}
               {activeTab === 'pos' && <POS productsProp={products} storeSettings={storeSettings} onInvoiceCreated={handleInvoiceCreated} onUpdateInvoice={handleUpdateInvoice} onQuoteCreated={handleQuoteCreated} onCreditSale={handleCreditSale} onOpenGemini={() => setIsGeminiOpen(true)} pendingQuote={pendingQuoteToLoad} onQuoteLoaded={() => setPendingQuoteToLoad(null)} customers={customers} onSaveCustomer={handleSaveCustomer} pendingEditInvoiceId={pendingEditInvoiceId} onEditLoaded={() => setPendingEditInvoiceId(null)} invoices={invoices} userId={currentUser?.id} />}
               {activeTab === 'inventory' && <Inventory products={products} kardexEntries={kardexEntries} categories={categories} onAddCategory={handleAddCategory} onAddProduct={handleAddProduct} onUpdateProducts={handleUpdateProducts} onDeleteProduct={handleDeleteProduct} onPhysicalCount={handlePhysicalCount} />}
               {activeTab === 'dashboard' && <Dashboard invoices={invoices} products={products} expenses={expenses} totalDebt={creditAccounts.reduce((s,a)=>s+a.currentDebt,0)} cxpTotal={supplierAccounts.reduce((s,a)=>s+a.currentBalance,0)} onRefresh={async () => { loadAllData(); }} />}

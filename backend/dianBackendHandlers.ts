@@ -294,14 +294,11 @@ function generarXMLUBL21(invoice: any, settings: any, cufe: string): string {
 }
 
 // ===== Firma Digital del XML con Certificado .p12 (RSA-SHA256) =====
-// ✅ CORREGIDO: Usa la API correcta de node-forge
 async function firmarXMLConP12(xml: string, p12Buffer: Buffer, pin: string): Promise<string> {
   try {
-    // Convertir buffer a objeto forge
     const p12Asn1 = forge.asn1.fromDer(forge.util.createBuffer(p12Buffer.toString('binary'), 'raw'));
     const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, false, pin);
     
-    // Extraer clave privada y certificado
     const keyBags = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag });
     const certBags = p12.getBags({ bagType: forge.pki.oids.certBag });
     
@@ -312,17 +309,12 @@ async function firmarXMLConP12(xml: string, p12Buffer: Buffer, pin: string): Pro
       throw new Error('No se pudo extraer la clave privada o el certificado del archivo .p12');
     }
     
-    // ✅ CORREGIDO: Crear message digest SHA-256 con API correcta de forge
     const md = forge.md.sha256.create();
     md.update(xml, 'utf8');
     
-    // Firmar con RSA-SHA256 (forge usa el algoritmo del digest automáticamente)
     const signature = privateKey.sign(md);
-    
-    // ✅ CORREGIDO: Convertir firma a Base64 usando forge (NO Buffer.from)
     const signatureBase64 = forge.util.encode64(signature);
     
-    // Preparar certificado en Base64 para inyectar en XML
     const certPem = forge.pki.certificateToPem(certificate);
     const certBase64 = certPem
       .replace(/-----BEGIN CERTIFICATE-----/, '')
@@ -330,7 +322,6 @@ async function firmarXMLConP12(xml: string, p12Buffer: Buffer, pin: string): Pro
       .replace(/\n/g, '')
       .trim();
     
-    // Generar bloque de firma digital (MVP simplificado; para XAdES-EPES completo usar xml-crypto)
     const signatureId = `xmldsig-${Date.now()}`;
     const signatureBlock = `
   <ext:UBLExtensions>
@@ -392,7 +383,6 @@ async function transmitirAProveedorTecnologico(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 45000);
     
-    // ✅ CORREGIDO: Usa randomUUID importado directamente
     const response = await fetch(ptEndpoint, {
       method: 'POST',
       headers: {
@@ -512,11 +502,9 @@ export const dianTransmitHandler = async (req: express.Request, res: express.Res
     }
 
     const parsed = validation;
-    // Normalizar método de pago a código DIAN
     parsed.data.pago.metodo = parsed.data.pago.metodo.startsWith("2") ? "2" : "1";
     invoice.pago.metodo = parsed.data.pago.metodo;
 
-    // Guarda: las notas (92/93) quedan bloqueadas hasta implementar su backend
     const NOTAS_CREDITO_HABILITADAS = false;
     if (parsed.data.tipo_documento !== "91" && !NOTAS_CREDITO_HABILITADAS) {
       return res.status(403).json({ success: false, message: "Las notas crédito/débito estarán habilitadas en una próxima versión." });
