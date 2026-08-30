@@ -109,23 +109,30 @@ export const verifyPaymentHandler = async (req: Request, res: Response) => {
 
     try {
       const db = getAdminDb();
-      await db.collection('subscriptions').doc(userId).set({
-        status: 'active',
-        plan: 'PRO',
-        transactionId: transactionId,
-        wompiTxId: transactionId,
-        paidAt: now.toISOString(),
-        nextBillingAt: next.toISOString(),
-        trialEndsAt: next.toISOString(),
-        amount: amountCents / 100,
-        currency: 'COP',
-        updatedAt: now.toISOString()
-      }, { merge: true });
+      const subRef = db.collection('subscriptions').doc(userId);
+      const existing = await subRef.get();
+      const yaAplicada = existing.exists && existing.data()?.wompiTxId === transactionId;
+
+      if (!yaAplicada) {
+        await db.collection('subscriptions').doc(userId).set({
+          status: 'active',
+          plan: 'PRO',
+          transactionId: transactionId,
+          wompiTxId: transactionId,
+          paidAt: now.toISOString(),
+          nextBillingAt: next.toISOString(),
+          trialEndsAt: next.toISOString(),
+          amount: amountCents / 100,
+          currency: 'COP',
+          updatedAt: now.toISOString()
+        }, { merge: true });
+        logger.info({ userId, transactionId, source: 'verify' }, '✅ Suscripción activada por el backend');
+      } else {
+        logger.info({ userId, transactionId }, 'Transacción ya aplicada; respuesta idempotente sin re-extender fechas.');
+      }
     } catch (e: any) {
       logger.warn({ err: e.message, userId }, 'No se pudo guardar la suscripción en Firestore (sandbox).');
     }
-
-    logger.info({ userId, transactionId, source: 'verify' }, '✅ Suscripción activada por el backend');
 
     // 4. Firma legacy para compatibilidad
     const signature = crypto
