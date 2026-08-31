@@ -211,14 +211,16 @@ Responde SIEMPRE en español colombiano, con calidez y precisión.
 
 // Vite middleware para desarrollo y frontend estático en producción
 async function startServer() {
-  if (process.env.NODE_ENV === 'production') {
-    const distPath = path.join(process.cwd(), 'dist');
+  const distPath = path.join(process.cwd(), 'dist');
+  const hasDist = fsSync.existsSync(path.join(distPath, 'index.html'));
+
+  if (process.env.NODE_ENV === 'production' && hasDist) {
     app.use(express.static(distPath));
     app.get('*all', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   } else {
-    // Development mode - integrate Vite middleware
+    // Development mode or missing dist - integrate Vite middleware
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
