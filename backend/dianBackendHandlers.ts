@@ -359,14 +359,17 @@ async function firmarXMLConP12(xml: string, p12Buffer: Buffer, pin: string): Pro
 async function transmitirAProveedorTecnologico(
   xmlFirmado: string, 
   cufe: string, 
-  invoiceId: string
+  invoiceId: string,
+  settings: any
 ): Promise<{ approved: boolean; dianResponse: any; error?: string }> {
   
-  const ptEndpoint = process.env.PT_API_URL;
-  const ptApiKey = process.env.PT_API_KEY;
+  const isHab = settings?.dianAmbiente === 'HABILITACION';
+  let ptEndpoint = isHab ? (process.env.DIAN_HAB_URL || process.env.PT_API_URL) : process.env.PT_API_URL;
+  let ptApiKey = settings?.dianApiKey || process.env.PT_API_KEY;
   
+  // Si Kiosko_Comercial usa la configuración por defecto
   if (!ptEndpoint) {
-    throw new Error('Proveedor Tecnológico no configurado. Establezca PT_API_URL en variables de entorno.');
+    throw new Error('Configura tu proveedor/ambiente en Ajustes');
   }
   
   const payload = {
@@ -569,7 +572,8 @@ export const dianTransmitHandler = async (req: express.Request, res: express.Res
     const { approved, dianResponse, error: ptError } = await transmitirAProveedorTecnologico(
       xmlFirmado, 
       cufe, 
-      invoice.factura_id || invoice.id
+      invoice.factura_id || invoice.id,
+      settings
     );
 
     const duration = Date.now() - startTime;

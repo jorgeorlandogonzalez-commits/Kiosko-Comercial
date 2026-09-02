@@ -107,7 +107,9 @@ export const encolarParaTransmision = async (
       settings: {
         nit: settings.nit,
         razon_social: settings.businessName || settings.name,
-        certificateName: settings.certificateName || ''
+        certificateName: settings.certificateName || '',
+          dianAmbiente: settings.dianAmbiente,
+          dianApiKey: settings.dianApiKey
       }
     },
     retries: 0,
@@ -234,7 +236,9 @@ export const transmitToDian = async (
         settings: {
           nit: settings.nit,
           razon_social: settings.businessName || settings.name,
-          certificateName: settings.certificateName || ''
+          certificateName: settings.certificateName || '',
+          dianAmbiente: settings.dianAmbiente,
+          dianApiKey: settings.dianApiKey
         }
       }),
       signal: controller.signal

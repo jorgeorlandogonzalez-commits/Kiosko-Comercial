@@ -1618,7 +1618,7 @@ function MainApp() {
       {showLogoutModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-brand-black/90 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full animate-in zoom-in-95 shadow-2xl">
-            <h3 className="text-xl font-black text-brand-black mb-4 text-center">¿Deseas salir del terminal?</h3>
+            <h3 className="text-xl font-black text-brand-black mb-4 text-center">¿Salir del Kiosko?</h3>
             <div className="flex gap-3 mt-6">
               <button onClick={() => setShowLogoutModal(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-bold transition-colors">Cancelar</button>
               <button onClick={() => { setShowLogoutModal(false); signOut(auth); }} className="flex-1 bg-brand-red hover:bg-red-700 text-white py-3 rounded-xl font-bold transition-colors">Salir</button>

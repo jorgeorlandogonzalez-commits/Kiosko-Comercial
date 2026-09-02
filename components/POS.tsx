@@ -585,7 +585,7 @@ export const POS: React.FC<POSProps> = ({
       total: cartTotals.total,
       paymentMethod: method,
       paymentDetails: mixedData,
-      dianStatus: 'DRAFT',
+      dianStatus: storeSettings.dianMode === 'PUENTE' ? 'PENDIENTE_REGISTRO' : 'DRAFT',
     };
 
 
@@ -1632,10 +1632,10 @@ export const POS: React.FC<POSProps> = ({
                       <CloudUpload size={24} className={lastInvoice.dianStatus === 'APPROVED' ? 'text-green-600' : 'text-brand-red'} />
                       <div className="text-left">
                         <p className="text-xs font-black uppercase text-gray-800">Estado del Documento</p>
-                        <p className="text-[10px] text-gray-500 font-bold uppercase">{lastInvoice.dianStatus === 'APPROVED' ? 'Factura Electrónica (Sincronizada)' : 'Recibo POS (Uso Interno)'}</p>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase">{lastInvoice.dianStatus === 'APPROVED' ? 'Factura Electrónica (Sincronizada)' : (lastInvoice.dianStatus === 'PENDIENTE_REGISTRO' ? 'Pendiente Registro DIAN' : 'Recibo POS (Uso Interno)')}</p>
                       </div>
                     </div>
-                    {lastInvoice.dianStatus !== 'APPROVED' && (
+                    {lastInvoice.dianStatus !== 'APPROVED' && storeSettings.dianMode !== 'PUENTE' && (
                       <button 
                         onClick={() => setShowEmitConfirmation(true)} 
                         className="w-full py-4 bg-brand-red text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-500/30 flex items-center justify-center gap-2"

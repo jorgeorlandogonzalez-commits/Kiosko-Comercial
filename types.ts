@@ -70,6 +70,9 @@ export interface StoreSettings {
   dianApiKey?: string;
   dianSoftwareId?: string;
   dianPin?: string;
+  dianMode?: 'PUENTE' | 'DIRECTO';
+  dianAmbiente?: 'HABILITACION' | 'PRODUCTIVO';
+  certEstado?: 'NINGUNO' | 'GRATUITO' | 'COMERCIAL';
   dianTestSetId?: string;
   certificateName?: string;
   certificateBase64?: string;
@@ -161,7 +164,7 @@ export interface Invoice {
   total: number;
   paymentMethod: PaymentMethod;
   paymentDetails?: { method: PaymentMethod; amount: number }[];
-  dianStatus: 'DRAFT' | 'SENDING' | 'APPROVED' | 'REJECTED';
+  dianStatus: 'DRAFT' | 'SENDING' | 'APPROVED' | 'REJECTED' | 'PENDIENTE_REGISTRO' | 'REGISTRADA_MANUAL';
   cufe?: string;
   operatorName?: string;
   status?: 'ACTIVE' | 'ANNULLED';

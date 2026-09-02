@@ -17,12 +17,36 @@ export const Settings: React.FC<SettingsProps> = ({ settings, onSave, userId, on
   const [isSaved, setIsSaved] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isDianReady, setIsDianReady] = useState(false);
+  const [showModeModal, setShowModeModal] = useState(false);
+  const [pendingMode, setPendingMode] = useState<'PUENTE'|'DIRECTO'|null>(null);
+  const [showDiagnosticModal, setShowDiagnosticModal] = useState(!settings.dianMode);
+  const [diagnosticStep, setDiagnosticStep] = useState(1);
+  const [diagnosticAnswers, setDiagnosticAnswers] = useState<{type: 'GRATUITO' | 'COMERCIAL' | null}>({type: null});
+
+  const applyDiagnosticResult = (mode: 'PUENTE'|'DIRECTO', cert: 'GRATUITO'|'COMERCIAL') => {
+      setFormData(prev => ({ ...prev, dianMode: mode, certEstado: cert }));
+      setShowDiagnosticModal(false);
+  };
+
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setFormData(settings);
   }, [settings]);
 
+  const handleDianModeClick = (mode: 'PUENTE' | 'DIRECTO') => {
+    if (formData.dianMode === mode) return;
+    setPendingMode(mode);
+    setShowModeModal(true);
+  };
+  const confirmDianMode = () => {
+    if (pendingMode) {
+      setFormData(prev => ({ ...prev, dianMode: pendingMode }));
+      setShowModeModal(false);
+      setPendingMode(null);
+    }
+  };
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
     const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
@@ -155,6 +179,96 @@ export const Settings: React.FC<SettingsProps> = ({ settings, onSave, userId, on
   return (
     <div className="max-w-4xl mx-auto p-6 pb-32">
       {/* MODAL RESET DE FÁBRICA */}
+      
+      
+      {/* MODAL ASISTENTE DIAGNÓSTICO DIAN */}
+      {showDiagnosticModal && (
+          <div className="fixed inset-0 z-[600] bg-brand-black/90 flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 flex flex-col">
+                  <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
+                      <div>
+                          <h3 className="text-xl font-black uppercase tracking-tighter flex items-center gap-2"><Store className="text-brand-red" /> Don J te ayuda a configurar</h3>
+                          <p className="text-xs text-gray-500 font-bold mt-1">Pregunta {diagnosticStep} de 2</p>
+                      </div>
+                  </div>
+                  <div className="p-8">
+                      {diagnosticStep === 1 && (
+                          <>
+                              <p className="text-sm text-gray-600 font-medium mb-6 leading-relaxed">
+                                  ¡Qué bueno verle por acá, mi socio! Para que la DIAN no nos moleste, cuénteme: <strong>¿Usted cómo hace hoy sus facturas electrónicas?</strong>
+                              </p>
+                              <div className="space-y-3">
+                                  <button onClick={() => { setDiagnosticAnswers({ ...diagnosticAnswers, type: 'GRATUITO' }); setDiagnosticStep(2); }} className="w-full text-left p-4 rounded-xl border-2 border-gray-200 hover:border-brand-red hover:bg-red-50 transition-all">
+                                      <p className="font-black text-brand-black text-sm uppercase">Uso el portal gratuito de la DIAN</p>
+                                      <p className="text-[10px] text-gray-500 mt-1">Me meto a la página de la DIAN a hacerlas a mano.</p>
+                                  </button>
+                                  <button onClick={() => { setDiagnosticAnswers({ ...diagnosticAnswers, type: 'COMERCIAL' }); setDiagnosticStep(2); }} className="w-full text-left p-4 rounded-xl border-2 border-gray-200 hover:border-brand-red hover:bg-red-50 transition-all">
+                                      <p className="font-black text-brand-black text-sm uppercase">Compré un certificado digital (.p12)</p>
+                                      <p className="text-[10px] text-gray-500 mt-1">Lo tengo guardado en mi computador y listo para usar.</p>
+                                  </button>
+                              </div>
+                          </>
+                      )}
+                      
+                      {diagnosticStep === 2 && diagnosticAnswers.type === 'GRATUITO' && (
+                          <>
+                              <p className="text-sm text-gray-600 font-medium mb-6 leading-relaxed">
+                                  ¡Listo, don/doña! Lo mejor para usted ahorita es el <strong>Modo Puente</strong>. Kiosko le deja todo listico para que usted solo suba la info al portal de la DIAN en dos minuticos, sin enredarse la vida.
+                              </p>
+                              <button onClick={() => applyDiagnosticResult('PUENTE', 'GRATUITO')} className="w-full py-4 bg-brand-red text-white rounded-xl font-black uppercase tracking-widest text-sm hover:bg-red-700 transition-all shadow-lg shadow-red-500/30">
+                                  ¡Hágale, Configurar Modo Puente!
+                              </button>
+                          </>
+                      )}
+
+                      {diagnosticStep === 2 && diagnosticAnswers.type === 'COMERCIAL' && (
+                          <>
+                              <p className="text-sm text-gray-600 font-medium mb-6 leading-relaxed">
+                                  Uf, puro nivel mi socio. Una preguntica más: <strong>¿Usted ya hizo el proceso de habilitación (el set de pruebas de la DIAN)?</strong>
+                              </p>
+                              <div className="space-y-3">
+                                  <button onClick={() => applyDiagnosticResult('DIRECTO', 'COMERCIAL')} className="w-full text-left p-4 rounded-xl border-2 border-gray-200 hover:border-brand-red hover:bg-red-50 transition-all">
+                                      <p className="font-black text-brand-black text-sm uppercase">Sí, ya estoy habilitado al 100%</p>
+                                      <p className="text-[10px] text-gray-500 mt-1">Ya pasé las pruebas y estoy en producción.</p>
+                                  </button>
+                                  <button onClick={() => applyDiagnosticResult('PUENTE', 'COMERCIAL')} className="w-full text-left p-4 rounded-xl border-2 border-gray-200 hover:border-brand-red hover:bg-red-50 transition-all">
+                                      <p className="font-black text-brand-black text-sm uppercase">No, todavía me falta</p>
+                                      <p className="text-[10px] text-gray-500 mt-1">Tengo el archivo pero no he hecho las pruebas.</p>
+                                  </button>
+                              </div>
+                              <p className="text-[10px] text-gray-400 mt-4 text-center italic">* Si aún le falta, le sugerimos el Modo Puente por ahora. ¡Nosotros le avisamos cuando Kiosko automatice la habilitación!</p>
+                          </>
+                      )}
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* MODAL CAMBIO DE MODO DIAN */}
+      {showModeModal && (
+          <div className="fixed inset-0 z-[600] bg-brand-black/80 flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden border-t-8 border-brand-red shadow-2xl animate-in zoom-in-95 flex flex-col">
+                  <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 shrink-0">
+                      <div>
+                          <h3 className="text-xl font-black uppercase tracking-tighter flex items-center gap-2"><ShieldAlert className="text-brand-red" /> {pendingMode === 'PUENTE' ? 'Modo Puente' : 'Modo Directo'}</h3>
+                          <p className="text-xs text-gray-500 font-bold tracking-widest uppercase mt-1">Cambio de Parametrización</p>
+                      </div>
+                  </div>
+                  <div className="p-8 shrink-0">
+                      <p className="text-sm text-gray-600 font-medium mb-8 leading-relaxed">
+                          {pendingMode === 'PUENTE' 
+                            ? 'Sumercé, al pasar al Modo Puente, Kiosko ya no transmitirá automáticamente las facturas. Usted tendrá que descargarlas y subirlas manualmente al portal gratuito de la DIAN. ¿Está seguro?' 
+                            : 'Mi socio, al pasar al Modo Directo, Kiosko transmitirá automáticamente todas las facturas a la DIAN usando su certificado. Asegúrese de estar habilitado para evitar dolores de cabeza. ¿Continuamos?'}
+                      </p>
+                      <div className="flex gap-4">
+                          <button onClick={() => setShowModeModal(false)} className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-xl font-black uppercase tracking-widest text-sm hover:bg-gray-200 transition-all">Mejor No</button>
+                          <button onClick={confirmDianMode} className="flex-1 py-4 bg-brand-red text-white rounded-xl font-black uppercase tracking-widest text-sm hover:bg-red-700 transition-all shadow-lg shadow-red-500/30">Sí, Cambiar</button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {showResetModal && (
           <div className="fixed inset-0 z-[600] bg-brand-black/95 flex items-center justify-center p-4">
               <div className="bg-white rounded-[3rem] w-full max-w-md overflow-hidden border-t-[12px] border-brand-red shadow-2xl animate-in zoom-in-95 flex flex-col">
@@ -311,82 +425,147 @@ export const Settings: React.FC<SettingsProps> = ({ settings, onSave, userId, on
           </div>
         </div>
 
-        {/* NUEVA SECCIÓN: Integración API DIAN */}
+        {/* NUEVA SECCIÓN: Parametrización DIAN */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="bg-blue-50 px-6 py-4 border-b border-blue-100 flex items-center gap-2">
-            <ShieldAlert className="text-blue-600" size={20} />
-            <h3 className="font-bold text-blue-600 uppercase text-sm">Integración API DIAN / Proveedor Tecnológico</h3>
+          <div className="bg-blue-50 px-6 py-4 border-b border-blue-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="text-blue-600" size={20} />
+              <h3 className="font-bold text-blue-600 uppercase text-sm">Modo de Operación DIAN</h3>
+            </div>
+            <div>
+              <select name="certEstado" value={formData.certEstado || 'NINGUNO'} onChange={handleChange} className="text-xs bg-white border border-blue-200 rounded-lg px-2 py-1 text-blue-800 font-bold outline-none">
+                <option value="NINGUNO">Sin Certificado</option>
+                <option value="GRATUITO">Certificado Gratuito DIAN</option>
+                <option value="COMERCIAL">Certificado .p12 Comercial</option>
+              </select>
+            </div>
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-              <label className="block text-xs font-black text-gray-500 uppercase mb-2">Proveedor de Facturación Electrónica</label>
-              <select name="techProvider" value={formData.techProvider || 'KIOSKO_COMERCIAL'} onChange={handleChange} className={inputClass}>
-                <option value="KIOSKO_COMERCIAL">Kiosko Comercial (Recomendado)</option>
-                <option value="DIAN_DIRECTO">Software Propio (DIAN Directo)</option>
-                <option value="FACTURADOR_PRO">Facturador Pro</option>
-                <option value="ALEGRA">Alegra</option>
-                <option value="SIIGO">Siigo</option>
-              </select>
-              <p className="text-[10px] text-gray-400 mt-1">Seleccione el proveedor tecnológico con el que transmitirá las facturas.</p>
+            
+            <div 
+              onClick={() => handleDianModeClick('PUENTE')}
+              className={`border-2 rounded-xl p-5 cursor-pointer transition-all ${(formData.dianMode || 'PUENTE') === 'PUENTE' ? 'border-brand-red bg-red-50/30 shadow-md ring-4 ring-red-50' : 'border-gray-200 hover:border-red-200 bg-white'}`}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="font-black text-gray-800 text-lg flex items-center gap-2">
+                    <span className="text-2xl">🌉</span> MODO PUENTE
+                  </h4>
+                  <p className="text-sm text-gray-600 font-bold mt-1">Facturo en el portal gratuito de la DIAN</p>
+                </div>
+                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${(formData.dianMode || 'PUENTE') === 'PUENTE' ? 'border-brand-red bg-brand-red' : 'border-gray-300'}`}>
+                  {(formData.dianMode || 'PUENTE') === 'PUENTE' && <span className="text-white text-xs">✓</span>}
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-3 leading-relaxed">
+                Kiosko te deja todo listo; registras en 2 minutos. Ideal para negocios pequeños que usan el Facturador Gratuito de la DIAN.
+              </p>
             </div>
-            {formData.techProvider === 'KIOSKO_COMERCIAL' && (
-              <div className="md:col-span-2 bg-green-50 p-4 rounded-xl border border-green-100">
-                <h4 className="font-bold text-green-800 text-sm mb-2">¡Excelente elección!</h4>
-                <p className="text-xs text-green-700 mb-4">
-                  Al usar Kiosko Comercial como tu Proveedor Tecnológico, nosotros nos encargamos de la firma digital y la transmisión a la DIAN. Solo necesitas subir tu Certificado Digital.
-                </p>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-black text-green-800 uppercase mb-2">Certificado Digital (.p12 / .pfx)</label>
-                    <div className="flex items-center gap-4">
-                      <input 
-                        type="file" 
-                        accept=".p12,.pfx" 
-                        onChange={handleFileUpload} 
-                        disabled={isUploading}
-                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-100 file:text-green-700 hover:file:bg-green-200 disabled:opacity-50" 
-                      />
-                      {(formData.certificateName || isUploading) && (
-                        <span className="text-xs font-bold text-green-700 bg-green-200 px-3 py-1 rounded-full whitespace-nowrap flex items-center gap-2">
-                          {isUploading ? <Loader2 size={12} className="animate-spin" /> : '✓'}
-                          {isUploading ? 'Subiendo...' : formData.certificateName}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[10px] text-green-600 mt-1">El certificado se encriptará y almacenará de forma segura.</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-black text-green-800 uppercase mb-2">Contraseña del Certificado</label>
-                    <input type="password" name="dianPin" value={formData.dianPin || ''} onChange={handleChange} className={`${inputClass} border-green-200 focus:ring-green-500`} placeholder="••••••••" />
-                  </div>
+
+            <div 
+              onClick={() => {
+                if (formData.certEstado === 'COMERCIAL' && isDianReady) {
+                  handleDianModeClick('DIRECTO');
+                }
+              }}
+              className={`border-2 rounded-xl p-5 relative transition-all ${(formData.dianMode || 'PUENTE') === 'DIRECTO' ? 'border-brand-red bg-red-50/30 shadow-md ring-4 ring-red-50' : 'border-gray-200 bg-white'} ${!(formData.certEstado === 'COMERCIAL' && isDianReady) ? 'opacity-60 grayscale cursor-not-allowed' : 'cursor-pointer hover:border-red-200'}`}
+            >
+              {!(formData.certEstado === 'COMERCIAL' && isDianReady) && (
+                <div className="absolute -top-3 -right-3 bg-gray-800 text-white p-2 rounded-full shadow-lg">
+                  <ShieldCheck size={16} />
+                </div>
+              )}
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="font-black text-gray-800 text-lg flex items-center gap-2">
+                    <span className="text-2xl">🔐</span> MODO DIRECTO
+                  </h4>
+                  <p className="text-sm text-gray-600 font-bold mt-1">Facturo desde Kiosko con mi certificado .p12</p>
+                </div>
+                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${(formData.dianMode || 'PUENTE') === 'DIRECTO' ? 'border-brand-red bg-brand-red' : 'border-gray-300'}`}>
+                  {(formData.dianMode || 'PUENTE') === 'DIRECTO' && <span className="text-white text-xs">✓</span>}
                 </div>
               </div>
-            )}
-            {formData.techProvider !== 'KIOSKO_COMERCIAL' && (
-              <div className="md:col-span-2">
-                <label className="block text-xs font-black text-gray-500 uppercase mb-2">API Key / Token de Acceso</label>
-                <input type="password" name="dianApiKey" value={formData.dianApiKey || ''} onChange={handleChange} className={`${inputClass} font-mono`} placeholder="••••••••••••••••••••••••" />
+              <p className="text-xs text-gray-500 mt-3 leading-relaxed">
+                Transmisión automática; requiere certificado comercial y habilitación. Kiosko firma y transmite directamente a la DIAN.
+              </p>
+
+              {/* Controles para desbloquear el modo directo */}
+              {!(formData.dianMode === 'DIRECTO') && (
+                <div className="mt-4 pt-4 border-t border-gray-100" onClick={e => e.stopPropagation()}>
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={isDianReady} 
+                      onChange={e => setIsDianReady(e.target.checked)} 
+                      disabled={formData.certEstado !== 'COMERCIAL'}
+                      className="mt-1 w-4 h-4 accent-brand-red" 
+                    />
+                    <span className="text-[10px] text-gray-500 leading-tight">
+                      Confirmo que completé el set de pruebas / estoy habilitado como software propio
+                    </span>
+                  </label>
+                  {formData.certEstado !== 'COMERCIAL' && (
+                    <p className="text-[9px] text-red-500 font-bold mt-2">
+                      Debes seleccionar "Certificado .p12 Comercial" arriba para poder habilitar esta opción.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Configuraciones Adicionales si está en MODO DIRECTO */}
+            {(formData.dianMode === 'DIRECTO') && (
+              <div className="md:col-span-2 bg-gray-50 p-6 rounded-xl border border-gray-200 space-y-6">
+                <div>
+                  <label className="block text-xs font-black text-gray-500 uppercase mb-2">Ambiente DIAN</label>
+                  <select name="dianAmbiente" value={formData.dianAmbiente || 'HABILITACION'} onChange={handleChange} className="w-full text-sm bg-white border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-brand-red focus:ring-1 focus:ring-brand-red">
+                    <option value="HABILITACION">Habilitación (Pruebas)</option>
+                    <option value="PRODUCTIVO">Producción</option>
+                  </select>
+                </div>
+                
+                {formData.dianAmbiente === 'HABILITACION' && (
+                  <div>
+                    <label className="block text-xs font-black text-gray-500 uppercase mb-2">Test Set ID (Solo para habilitación)</label>
+                    <input type="text" name="dianTestSetId" value={formData.dianTestSetId || ''} onChange={handleChange} className="w-full text-sm bg-white border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-brand-red focus:ring-1 focus:ring-brand-red font-mono" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-black text-gray-500 uppercase mb-2">Software ID (DIAN)</label>
+                    <input type="text" name="dianSoftwareId" value={formData.dianSoftwareId || ''} onChange={handleChange} className="w-full text-sm bg-white border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-brand-red focus:ring-1 focus:ring-brand-red font-mono" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black text-gray-500 uppercase mb-2">PIN del Software</label>
+                    <input type="password" name="dianPin" value={formData.dianPin || ''} onChange={handleChange} className="w-full text-sm bg-white border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-brand-red focus:ring-1 focus:ring-brand-red font-mono" placeholder="••••" />
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <label className="block text-xs font-black text-gray-800 uppercase mb-2">Certificado Digital (.p12 / .pfx)</label>
+                  <div className="flex items-center gap-4">
+                    <input 
+                       type="file" 
+                       accept=".p12,.pfx" 
+                       onChange={handleFileUpload} 
+                       disabled={isUploading}
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 disabled:opacity-50" 
+                     />
+                    {(formData.certificateName || isUploading) && (
+                      <span className="text-xs font-bold text-gray-700 bg-gray-200 px-3 py-1 rounded-full whitespace-nowrap flex items-center gap-2">
+                        {isUploading ? 'Subiendo...' : '✓ ' + formData.certificateName}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-2">El certificado se encriptará y almacenará de forma segura en Cloud Storage.</p>
+                </div>
+
               </div>
-            )}
-            {formData.techProvider === 'DIAN_DIRECTO' && (
-              <>
-                <div>
-                  <label className="block text-xs font-black text-gray-500 uppercase mb-2">Software ID (DIAN)</label>
-                  <input type="text" name="dianSoftwareId" value={formData.dianSoftwareId || ''} onChange={handleChange} className={`${inputClass} font-mono`} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
-                </div>
-                <div>
-                  <label className="block text-xs font-black text-gray-500 uppercase mb-2">PIN del Software</label>
-                  <input type="password" name="dianPin" value={formData.dianPin || ''} onChange={handleChange} className={`${inputClass} font-mono`} placeholder="••••" />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-black text-gray-500 uppercase mb-2">Test Set ID (Solo para habilitación)</label>
-                  <input type="text" name="dianTestSetId" value={formData.dianTestSetId || ''} onChange={handleChange} className={`${inputClass} font-mono`} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
-                </div>
-              </>
             )}
           </div>
         </div>
-
         {/* Sección: Personalización de Impresión */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="bg-blue-50 px-6 py-4 border-b border-blue-100 flex items-center gap-2">

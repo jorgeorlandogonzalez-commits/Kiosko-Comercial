@@ -211,7 +211,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onTermin
                 <FileText size={28} />
               </div>
               <h3 className="text-xl font-bold mb-3">Facturación DIAN</h3>
-              <p className="text-gray-400 leading-relaxed text-sm">Cumple con todas las normas vigentes. Generación instantánea de facturas electrónicas (.XML y PDF) con tu propio certificado digital.</p>
+              <p className="text-gray-400 leading-relaxed text-sm">Cumple con todas las normas vigentes. MODO DUAL: Hazlo gratis con tu propio trabajo en el portal DIAN, o totalmente automático si tienes tu propio certificado digital (.p12).</p>
             </div>
             <div className="bg-white/5 border border-white/10 p-8 rounded-3xl hover:bg-white/10 transition-colors">
               <div className="bg-blue-500 w-14 h-14 rounded-2xl flex items-center justify-center mb-6">
@@ -367,7 +367,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onTermin
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2">
             <Store size={20} className="text-gray-400" />
-            <span className="font-black text-gray-400 tracking-widest uppercase text-xs">Kiosko Comercial © 2026</span>
+            <span className="font-black text-gray-400 tracking-widest uppercase text-xs">Kiosko Comercial V3.3 © 2026</span>
           </div>
           <div className="flex flex-wrap justify-center md:justify-end items-center gap-6 text-sm font-bold text-gray-500">
             <a href="/demo" className="hover:text-brand-red transition-colors">Tienda de ejemplo</a>

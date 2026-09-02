@@ -220,7 +220,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <LogOut size={32} />
                   </div>
                   <h3 className="text-xl font-black text-brand-black mb-2 uppercase">Cerrar Sesión</h3>
-                  <p className="text-gray-500 text-sm mb-6">¿Deseas salir del terminal?</p>
+                  <p className="text-gray-500 text-sm mb-6">¿Salir del Kiosko?</p>
                   <div className="flex flex-col gap-3">
                       <button onClick={() => { onLogoutClick(); setShowLogoutConfirm(false); }} className="w-full py-3 bg-brand-red text-white font-black rounded-xl uppercase hover:bg-brand-darkRed transition-all">Sí, Salir</button>
                       <button onClick={() => setShowLogoutConfirm(false)} className="w-full py-3 bg-gray-100 text-gray-600 font-black rounded-xl uppercase hover:bg-gray-200 transition-all">Cancelar</button>
