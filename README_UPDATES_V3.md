@@ -28,3 +28,13 @@ Para rotar el modelo principal (o la cadena), ejecuta este comando desde la term
 gcloud run services update kiosko-backend --region us-central1 --project gen-lang-client-0213647704 --update-env-vars DONJ_MODELS="modelo-a,modelo-b"
 ```
 Los modelos deben estar separados por comas (por ejemplo: `"gemini-3.5-flash-lite,gemini-3.1-flash-lite"`). El asistente intentará en ese orden hasta que uno responda exitosamente.
+
+## Configuración de Webhook Wompi (Activación Servidor-a-Servidor)
+Para asegurar que las suscripciones se activen incluso si el usuario cierra la ventana, configure el webhook en su panel de Wompi:
+
+1. Ingrese a su **Dashboard Wompi**.
+2. Navegue a la sección **Desarrolladores** > **Webhooks**.
+3. Añada la siguiente URL (reemplace el dominio con su dominio de producción si aplica):
+   \`https://kiosko-backend-253752974160.us-central1.run.app/api/wompi/webhook\`
+4. Suscríbase a los **eventos de transacción** (aprobada/rechazada).
+5. Guarde los cambios.

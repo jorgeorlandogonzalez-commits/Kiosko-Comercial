@@ -10,7 +10,7 @@ import { GoogleGenAI } from "@google/genai";
 import pino from "pino";
 import os from "os";
 import { dianTransmitHandler, verifyFirebaseToken } from "./backend/dianBackendHandlers.js";
-import { verifyPaymentHandler, getWompiPublicKey, getWompiSignature } from "./backend/paymentsHandler.js";
+import { verifyPaymentHandler, getWompiPublicKey, getWompiSignature, wompiWebhookHandler } from "./backend/paymentsHandler.js";
 
 // Logger estructurado
 const logger = pino({ level: 'info' });
@@ -86,6 +86,10 @@ app.post("/api/dian/transmit", verifyFirebaseToken, dianLimit, dianTransmitHandl
 app.post("/api/payments/verify", verifyFirebaseToken, verifyPaymentHandler);
 app.post("/api/payments/signature", verifyFirebaseToken, getWompiSignature);
 app.get("/api/config/wompi", getWompiPublicKey);
+
+const webhookLimit = rateLimit({ windowMs: 1 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false });
+app.post("/api/wompi/webhook", express.json(), webhookLimit, wompiWebhookHandler);
+
 
 const DONJ_MODEL_CHAIN = (process.env.DONJ_MODELS || "gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-2.5-flash").split(",").map(s => s.trim()).filter(Boolean);
 

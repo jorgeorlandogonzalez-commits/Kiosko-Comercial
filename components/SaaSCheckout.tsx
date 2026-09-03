@@ -1,3 +1,5 @@
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import React, { useState, useEffect } from 'react';
 import { X, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
 
@@ -79,6 +81,19 @@ const SaaSCheckout: React.FC<SaaSCheckoutProps> = ({ isOpen, onClose, userId, us
     const uniqueReference = `sub_${userId}_${Date.now()}`;
     const planAmountCOP = 39900;
     const amountInCents = planAmountCOP * 100;
+
+    // TAREA 1.1: Guardar paymentIntent
+    try {
+      await setDoc(doc(db, 'paymentIntents', uniqueReference), {
+        uid: userId,
+        plan: 'PRO',
+        amountInCents,
+        createdAt: new Date().toISOString(),
+        status: 'PENDING'
+      });
+    } catch (e) {
+      console.warn("No se pudo guardar paymentIntent:", e);
+    }
     const currency = 'COP';
 
     const widgetConfig: any = {

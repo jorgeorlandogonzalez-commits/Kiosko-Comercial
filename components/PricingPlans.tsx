@@ -1,3 +1,5 @@
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import React, { useState, useEffect } from 'react';
 import { Check, Shield, Zap, ArrowRight, Rocket } from 'lucide-react';
 import { PlanTier } from '../types';
@@ -70,10 +72,23 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTria
       }
     }
 
-    const uniqueReference = `sub_${user.uid}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const planAmountCOP = billingCycle === 'MONTHLY' ? 49900 : 499000;
     const amountInCents = planAmountCOP * 100;
     const currency = 'COP';
+    const uniqueReference = `sub_${user.uid}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+    // TAREA 1.1: Guardar paymentIntent
+    try {
+      await setDoc(doc(db, 'paymentIntents', uniqueReference), {
+        uid: user.uid,
+        plan: billingCycle === 'MONTHLY' ? 'PRO_MONTHLY' : 'PRO_YEARLY',
+        amountInCents,
+        createdAt: new Date().toISOString(),
+        status: 'PENDING'
+      });
+    } catch (e) {
+      console.warn("No se pudo guardar paymentIntent:", e);
+    }
 
     // Pedir firma de integridad
     let signatureIntegrity = null;
