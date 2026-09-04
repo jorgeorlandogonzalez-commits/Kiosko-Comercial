@@ -154,10 +154,12 @@ export const wompiWebhookHandler = async (req: Request, res: Response) => {
       logger.info({ body }, 'Webhook Wompi payload recibido');
     }
 
-    const transactionId = body?.data?.transaction?.id;
-    const reference = body?.data?.transaction?.reference;
+    const tx = body?.data?.transaction || body?.data || body?.transaction || null;
+    const transactionId = tx?.id;
+    const reference = tx?.reference;
 
     if (!transactionId || !reference) {
+      logger.warn({ keys: Object.keys(body || {}), event_type: body?.event_type }, 'Webhook Wompi con formato no reconocido');
       return res.status(200).json({ ignored: 'faltan datos de transaccion' });
     }
 
