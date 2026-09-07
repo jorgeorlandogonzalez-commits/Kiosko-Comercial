@@ -499,6 +499,15 @@ function MainApp() {
     dbService.saveStoreSettings(updatedSettings);
   };
 
+  const handleUpdateMultipleInvoices = (updatedInvoices: Invoice[]) => {
+      let currentInvoices = [...invoices];
+      for (const updatedInvoice of updatedInvoices) {
+         currentInvoices = currentInvoices.map(i => i.id === updatedInvoice.id ? updatedInvoice : i);
+      }
+      setInvoices(currentInvoices);
+      dbService.saveInvoices(currentInvoices);
+  };
+
   const handleUpdateInvoice = (updatedInvoice: Invoice) => {
       // If it's an edit (items might have changed), we need to revert old and apply new
       const oldInvoice = invoices.find(i => i.id === updatedInvoice.id);
@@ -1688,7 +1697,7 @@ function MainApp() {
               {activeTab === 'pos' && <POS productsProp={products} storeSettings={storeSettings} onInvoiceCreated={handleInvoiceCreated} onUpdateInvoice={handleUpdateInvoice} onQuoteCreated={handleQuoteCreated} onCreditSale={handleCreditSale} onOpenGemini={() => setIsGeminiOpen(true)} pendingQuote={pendingQuoteToLoad} onQuoteLoaded={() => setPendingQuoteToLoad(null)} customers={customers} onSaveCustomer={handleSaveCustomer} pendingEditInvoiceId={pendingEditInvoiceId} onEditLoaded={() => setPendingEditInvoiceId(null)} invoices={invoices} userId={currentUser?.id} />}
               {activeTab === 'inventory' && <Inventory products={products} kardexEntries={kardexEntries} categories={categories} onAddCategory={handleAddCategory} onAddProduct={handleAddProduct} onUpdateProducts={handleUpdateProducts} onDeleteProduct={handleDeleteProduct} onPhysicalCount={handlePhysicalCount} />}
               {activeTab === 'dashboard' && <Dashboard invoices={invoices} products={products} expenses={expenses} totalDebt={creditAccounts.reduce((s,a)=>s+a.currentDebt,0)} cxpTotal={supplierAccounts.reduce((s,a)=>s+a.currentBalance,0)} onRefresh={async () => { loadAllData(); }} />}
-              {activeTab === 'invoices' && <DianStatus invoices={invoices} onUpdateInvoice={handleUpdateInvoice} storeSettings={storeSettings} userId={currentUser?.id} onIncrementConsecutive={() => {
+              {activeTab === 'invoices' && <DianStatus invoices={invoices} onUpdateInvoice={handleUpdateInvoice} onUpdateMultipleInvoices={handleUpdateMultipleInvoices} onUpdateSettings={handleSaveSettings} storeSettings={storeSettings} userId={currentUser?.id} onIncrementConsecutive={() => {
                 const next = Number(storeSettings.currentNumber || 1) + 1;
                 handleSaveSettings({ ...storeSettings, currentNumber: next });
               }} />}

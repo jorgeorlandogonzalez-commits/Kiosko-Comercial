@@ -160,6 +160,13 @@ export const dbService = {
   },
 
   getInvoices: (): Invoice[] => getFromStorage(KEYS.INVOICES, []),
+  saveInvoices: (invoices: Invoice[]) => {
+      saveToStorage(KEYS.INVOICES, invoices);
+      if (currentUserId) {
+          invoices.forEach(inv => saveToFirestore(currentUserId, 'invoices', inv));
+      }
+      return invoices;
+  },
   saveInvoice: (invoice: Invoice) => {
       const current = dbService.getInvoices();
       const existingIndex = current.findIndex(i => i.id === invoice.id);
