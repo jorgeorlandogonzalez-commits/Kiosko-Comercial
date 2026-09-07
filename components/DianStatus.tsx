@@ -10,12 +10,13 @@ interface DianStatusProps {
   onUpdateInvoice: (invoice: Invoice) => void;
   storeSettings?: StoreSettings;
   userId?: string;
+  onIncrementConsecutive?: () => void;
 }
 
 type FilterStatus = 'ALL' | 'APPROVED' | 'REJECTED' | 'SENDING';
 type DianServiceStatus = 'CHECKING' | 'ONLINE' | 'OFFLINE';
 
-export const DianStatus: React.FC<DianStatusProps> = ({ invoices, onUpdateInvoice, storeSettings, userId }) => {
+export const DianStatus: React.FC<DianStatusProps> = ({ invoices, onUpdateInvoice, storeSettings, userId, onIncrementConsecutive }) => {
   const [filter, setFilter] = useState<FilterStatus>('ALL');
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [manualCufe, setManualCufe] = useState<{ [key: string]: string }>({});
@@ -145,6 +146,7 @@ export const DianStatus: React.FC<DianStatusProps> = ({ invoices, onUpdateInvoic
      if (cufe) {
          onUpdateInvoice({ ...inv, dianStatus: 'REGISTRADA_MANUAL', cufe });
          setEditingManual(null);
+         onIncrementConsecutive?.();
      }
   };
 
