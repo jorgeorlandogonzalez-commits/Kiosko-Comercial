@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Invoice, StoreSettings } from '../types';
-import { CheckCircle, XCircle, Clock, FileText, Download, Filter, RefreshCw, AlertCircle, Save, Edit3, Upload, CheckSquare, Square, X } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, FileText, Download, Filter, RefreshCw, AlertCircle, Save, Edit3, Upload, CheckSquare, Square, X, MoreVertical, Send } from 'lucide-react';
 import { transmitToDian } from '../services/dianService';
 
 interface DianStatusProps {
@@ -24,11 +24,15 @@ export const DianStatus: React.FC<DianStatusProps> = ({ invoices, onUpdateInvoic
   const [manualCufe, setManualCufe] = useState<{ [key: string]: string }>({});
   const [editingManual, setEditingManual] = useState<string | null>(null);
   const [serviceStatus, setServiceStatus] = useState<DianServiceStatus>('CHECKING');
+  const [activeActionMenuId, setActiveActionMenuId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showChecklistModal, setShowChecklistModal] = useState(false);
   const [importSummary, setImportSummary] = useState<{ registered: number, notFound: string[] } | null>(null);
 
-  const pendingInvoices = useMemo(() => invoices.filter(i => i.dianStatus === 'PENDIENTE_REGISTRO'), [invoices]);
+  const pendingInvoices = useMemo(() => invoices.filter(i => {
+    if (storeSettings?.dianMode === 'PUENTE') return ['PENDIENTE_REGISTRO','DRAFT','SENDING','REJECTED'].includes(i.dianStatus || '');
+    return ['DRAFT','SENDING','REJECTED'].includes(i.dianStatus || '');
+  }), [invoices, storeSettings?.dianMode]);
 
   const toggleSelectAll = () => {
     if (selectedIds.size === pendingInvoices.length && pendingInvoices.length > 0) {
@@ -43,6 +47,18 @@ export const DianStatus: React.FC<DianStatusProps> = ({ invoices, onUpdateInvoic
     if (next.has(id)) next.delete(id);
     else next.add(id);
     setSelectedIds(next);
+  };
+
+  const handleBatchSendDirect = async () => {
+    if (selectedIds.size === 0) return;
+    const selected = invoices.filter(i => selectedIds.has(i.id));
+    for (const inv of selected) {
+        if (['DRAFT','REJECTED'].includes(inv.dianStatus || '')) {
+            await handleResend(inv);
+        }
+    }
+    setSelectedIds(new Set());
+    alert("Proceso de lote finalizado.");
   };
 
   const handleBatchExport = () => {
@@ -221,19 +237,22 @@ export const DianStatus: React.FC<DianStatusProps> = ({ invoices, onUpdateInvoic
     };
   }, []);
   
-  const filteredInvoices = useMemo(() => {
-    if (filter === 'ALL') return invoices;
-    return invoices.filter(inv => inv.dianStatus === filter);
-  }, [invoices, filter]);
-
   const stats = useMemo(() => {
     return {
         all: invoices.length,
-        approved: invoices.filter(i => i.dianStatus === 'APPROVED').length,
+        approved: invoices.filter(i => ['APPROVED','REGISTRADA_MANUAL'].includes(i.dianStatus || '')).length,
         rejected: invoices.filter(i => i.dianStatus === 'REJECTED').length,
-        pending: invoices.filter(i => i.dianStatus === 'SENDING' || i.dianStatus === 'DRAFT').length
+        pending: invoices.filter(i => ['SENDING','DRAFT','PENDIENTE_REGISTRO'].includes(i.dianStatus || '')).length
     };
   }, [invoices]);
+
+  const filteredInvoices = useMemo(() => {
+    if (filter === 'ALL') return invoices;
+    if (filter === 'APPROVED') return invoices.filter(i => ['APPROVED','REGISTRADA_MANUAL'].includes(i.dianStatus || ''));
+    if (filter === 'REJECTED') return invoices.filter(i => i.dianStatus === 'REJECTED');
+    if (filter === 'SENDING') return invoices.filter(i => ['SENDING','DRAFT','PENDIENTE_REGISTRO'].includes(i.dianStatus || ''));
+    return invoices;
+  }, [invoices, filter]);
 
   const handleExportCSV = () => {
     if (filteredInvoices.length === 0) return;
@@ -401,25 +420,25 @@ export const DianStatus: React.FC<DianStatusProps> = ({ invoices, onUpdateInvoic
             onClick={() => setFilter('ALL')}
             className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border-2 ${filter === 'ALL' ? 'bg-brand-black text-white border-brand-black shadow-lg' : 'bg-white text-gray-400 border-gray-200 hover:border-brand-black'}`}
           >
-              Todos ({stats.all})
+              TODOS ({stats.all})
           </button>
           <button 
             onClick={() => setFilter('APPROVED')}
             className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border-2 ${filter === 'APPROVED' ? 'bg-green-600 text-white border-green-600 shadow-lg' : 'bg-white text-gray-400 border-gray-200 hover:border-green-600'}`}
           >
-              Enviados ({stats.approved})
+              EMITIDOS ({stats.approved})
           </button>
           <button 
             onClick={() => setFilter('REJECTED')}
             className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border-2 ${filter === 'REJECTED' ? 'bg-red-600 text-white border-red-600 shadow-lg' : 'bg-white text-gray-400 border-gray-200 hover:border-red-600'}`}
           >
-              Errores ({stats.rejected})
+              EN ERROR ({stats.rejected})
           </button>
           <button 
             onClick={() => setFilter('SENDING')}
             className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border-2 ${filter === 'SENDING' ? 'bg-orange-500 text-white border-orange-500 shadow-lg' : 'bg-white text-gray-400 border-gray-200 hover:border-orange-500'}`}
           >
-              Pendientes ({stats.pending})
+              PENDIENTES ({stats.pending})
           </button>
       </div>
       
@@ -428,13 +447,11 @@ export const DianStatus: React.FC<DianStatusProps> = ({ invoices, onUpdateInvoic
             <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-brand-black text-white">
                 <tr>
-                {storeSettings?.dianMode === 'PUENTE' && (
-                  <th className="px-6 py-4 text-left">
+                                  <th className="px-6 py-4 text-left">
                     <button onClick={toggleSelectAll} className="text-white hover:text-gray-200">
                       {selectedIds.size === pendingInvoices.length && pendingInvoices.length > 0 ? <CheckSquare size={18} /> : <Square size={18} />}
                     </button>
                   </th>
-                )}
                 <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">ID Factura</th>
                 <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Fecha Emisión</th>
                 <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Cliente</th>
@@ -457,18 +474,23 @@ export const DianStatus: React.FC<DianStatusProps> = ({ invoices, onUpdateInvoic
                 ) : (
                     filteredInvoices.map((inv, idx) => (
                     <tr key={`${inv.id}-${idx}`} className={`hover:bg-gray-50/50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'} ${inv.status === 'ANNULLED' ? 'opacity-50 line-through bg-red-50/20' : ''}`}>
-                        {storeSettings?.dianMode === 'PUENTE' && (
-                          <td className="px-6 py-4">
-                            {inv.dianStatus === 'PENDIENTE_REGISTRO' && (
+                                                  <td className="px-6 py-4">
+                            {((storeSettings?.dianMode === 'PUENTE' && ['PENDIENTE_REGISTRO','DRAFT','SENDING','REJECTED'].includes(inv.dianStatus || '')) ||
+                              (storeSettings?.dianMode !== 'PUENTE' && ['DRAFT','SENDING','REJECTED'].includes(inv.dianStatus || ''))) && (
                               <button onClick={() => toggleSelect(inv.id)} className="text-gray-400 hover:text-brand-black">
                                 {selectedIds.has(inv.id) ? <CheckSquare size={18} className="text-brand-black" /> : <Square size={18} />}
                               </button>
                             )}
                           </td>
-                        )}
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-brand-black">
                             {inv.id}
                             {inv.status === 'ANNULLED' && <span className="ml-2 text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full no-underline inline-block">ANULADA</span>}
+                            {inv.isReturn && (
+                                <div className="mt-1">
+                                    <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">Nota Débito/Crédito</span>
+                                    {inv.originalId && <div className="text-[9px] text-gray-500 font-normal mt-0.5">Ref: {inv.originalId}</div>}
+                                </div>
+                            )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                             <div className="flex flex-col">
@@ -489,77 +511,51 @@ export const DianStatus: React.FC<DianStatusProps> = ({ invoices, onUpdateInvoic
                                 <CheckCircle size={14} className="text-green-600" /> Registrada Portal
                             </span>
                         )}
-                        {inv.dianStatus === 'PENDIENTE_REGISTRO' && (
+                        {(inv.dianStatus === 'PENDIENTE_REGISTRO' || (storeSettings?.dianMode === 'PUENTE' && inv.dianStatus === 'DRAFT')) && (
                             <span className="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-200 items-center gap-1.5">
                                 <Clock size={14} className="text-amber-600" /> Lista para Registrar
                             </span>
                         )}
-                        {inv.dianStatus === 'REJECTED' && storeSettings.dianMode !== 'PUENTE' && (
+                        {inv.dianStatus === 'REJECTED' && storeSettings?.dianMode !== 'PUENTE' && (
                             <span className="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-red-100 text-red-800 border border-red-200 items-center gap-1.5">
                                 <AlertCircle size={14} className="text-red-600" /> Error de Envío
                             </span>
                         )}
-                        {(inv.dianStatus === 'SENDING' || inv.dianStatus === 'DRAFT') && (
+                        {inv.dianStatus === 'SENDING' && (
                             <span className="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-orange-100 text-orange-800 border border-orange-200 items-center gap-1.5">
-                                <Clock size={14} className="animate-spin text-orange-600" /> Pendiente
+                                <Clock size={14} className="animate-spin text-orange-600" /> Enviando...
+                            </span>
+                        )}
+                        {inv.dianStatus === 'DRAFT' && storeSettings?.dianMode !== 'PUENTE' && (
+                            <span className="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-gray-100 text-gray-800 border border-gray-200 items-center gap-1.5">
+                                <Clock size={14} className="text-gray-600" /> Pendiente
                             </span>
                         )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
                             {inv.status === 'ANNULLED' ? (
                                 <span className="text-gray-300 italic text-[10px] font-bold uppercase tracking-tighter">No Aplica</span>
-                            ) : storeSettings.dianMode === 'PUENTE' ? (
-                                <div className="flex flex-col gap-2 items-center">
-                                    <button onClick={() => downloadPuentePDF(inv)} className="flex items-center gap-1 text-[10px] font-black uppercase text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded">
-                                        <Download size={12}/> Descargar PDF
+                            ) : (
+                                <div className="flex items-center justify-center gap-2">
+                                  {/* Envío Rápido en DIRECTO */}
+                                  {storeSettings?.dianMode !== 'PUENTE' && (inv.dianStatus === 'DRAFT' || inv.dianStatus === 'REJECTED') && (
+                                    <button 
+                                      onClick={() => handleResend(inv)} 
+                                      disabled={resendingId === inv.id}
+                                      className="text-brand-black hover:text-brand-red disabled:opacity-50 transition-colors"
+                                      title="Enviar Rápido"
+                                    >
+                                      {resendingId === inv.id ? <RefreshCw size={18} className="animate-spin" /> : <Send size={18} />}
                                     </button>
-                                    <button onClick={() => downloadResumen(inv)} className="flex items-center gap-1 text-[10px] font-black uppercase text-orange-600 hover:text-orange-800 bg-orange-50 px-2 py-1 rounded">
-                                        <FileText size={12}/> Resumen Portal
-                                    </button>
-                                    
-                                    {inv.dianStatus === 'REGISTRADA_MANUAL' ? (
-                                        <div className="text-[9px] font-bold text-green-700 bg-green-50 px-2 py-1 rounded border border-green-100">
-                                           {inv.cufe ? `Ref: ${inv.cufe}` : 'Registrada'}
-                                        </div>
-                                    ) : (
-                                        editingManual === inv.id ? (
-                                            <div className="flex flex-col gap-1 w-full max-w-[120px]">
-                                                <input 
-                                                  type="text" 
-                                                  placeholder="Número / CUFE" 
-                                                  value={manualCufe[inv.id] || ''} 
-                                                  onChange={e => setManualCufe({...manualCufe, [inv.id]: e.target.value})}
-                                                  className="text-[9px] border rounded px-1 py-0.5"
-                                                />
-                                                <div className="flex gap-1">
-                                                    <button onClick={() => setEditingManual(null)} className="flex-1 bg-gray-200 text-[9px] rounded">X</button>
-                                                    <button onClick={() => handleManualSave(inv)} className="flex-1 bg-green-500 text-white text-[9px] rounded flex justify-center py-0.5"><Save size={10}/></button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <button onClick={() => setEditingManual(inv.id)} className="flex items-center gap-1 text-[10px] font-black uppercase text-brand-black hover:text-brand-red bg-gray-100 px-2 py-1 rounded">
-                                                <Edit3 size={12}/> Marcar Registrada
-                                            </button>
-                                        )
-                                    )}
+                                  )}
+                                  <button 
+                                    onClick={() => setActiveActionMenuId(inv.id)} 
+                                    className="p-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                                  >
+                                    <MoreVertical size={18} />
+                                  </button>
                                 </div>
-                            ) : (inv.dianStatus === 'REJECTED' || inv.dianStatus === 'SENDING' || inv.dianStatus === 'DRAFT') ? (
-                                <button 
-                                    onClick={() => handleResend(inv)}
-                                    disabled={resendingId === inv.id}
-                                    className={`flex items-center gap-2 mx-auto px-3 py-1.5 rounded-lg text-xs font-black transition-all ${resendingId === inv.id ? 'bg-gray-100 text-gray-400' : 'bg-brand-black text-white hover:bg-brand-red shadow-md active:scale-95'}`}
-                                    title={inv.dianStatus === 'DRAFT' ? "Emitir Factura Electrónica" : "Reintentar transmisión a la DIAN"}
-                                >
-                                    {inv.dianStatus === 'DRAFT' ? (
-                                        <FileText size={14} className={resendingId === inv.id ? 'animate-pulse' : ''} />
-                                    ) : (
-                                        <RefreshCw size={14} className={resendingId === inv.id ? 'animate-spin' : ''} />
-                                    )}
-                                    <span>{resendingId === inv.id ? 'Enviando...' : (inv.dianStatus === 'DRAFT' ? 'Emitir a DIAN' : 'Reenviar')}</span>
-                                </button>
-                            ) : inv.dianStatus === 'APPROVED' ? (
-                                <span className="text-gray-300 italic text-[10px] font-bold uppercase tracking-tighter">Sincronizado</span>
-                            ) : null}
+                            )}
                         </td>
                     </tr>
                     ))
@@ -579,16 +575,21 @@ export const DianStatus: React.FC<DianStatusProps> = ({ invoices, onUpdateInvoic
           </div>
       )}
       {/* Floating Action Bar */}
-
-      {storeSettings?.dianMode === 'PUENTE' && selectedIds.size > 0 && (
+      {selectedIds.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-brand-black text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 z-50">
           <div className="font-bold">
             <span className="text-brand-red text-xl">{selectedIds.size}</span> facturas seleccionadas
           </div>
           <div className="h-8 w-px bg-gray-600"></div>
-          <button onClick={handleBatchExport} className="flex items-center gap-2 bg-brand-red hover:bg-red-700 px-4 py-2 rounded-xl font-bold transition-colors">
-            <Download size={18} /> Cierre de Día (Exportar)
-          </button>
+          {storeSettings?.dianMode === 'PUENTE' ? (
+             <button onClick={handleBatchExport} className="flex items-center gap-2 bg-brand-red hover:bg-red-700 px-4 py-2 rounded-xl font-bold transition-colors">
+               <Download size={18} /> Cierre de Día (Exportar)
+             </button>
+          ) : (
+             <button onClick={handleBatchSendDirect} className="flex items-center gap-2 bg-brand-red hover:bg-red-700 px-4 py-2 rounded-xl font-bold transition-colors">
+               <Send size={18} /> Enviar Lote a la DIAN
+             </button>
+          )}
         </div>
       )}
 
@@ -599,6 +600,91 @@ export const DianStatus: React.FC<DianStatusProps> = ({ invoices, onUpdateInvoic
             <Upload size={18} /> Importar Respuesta DIAN
             <input type="file" accept=".csv,.txt,.pdf" className="hidden" onChange={handleImportResponse} />
           </label>
+        </div>
+      )}
+
+      {/* Action Menu Modal */}
+      {activeActionMenuId && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          {(() => {
+             const inv = invoices.find(i => i.id === activeActionMenuId);
+             if (!inv) return null;
+             return (
+              <div className="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden">
+                <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                  <div>
+                    <h3 className="text-lg font-black text-brand-black">{inv.id}</h3>
+                    <p className="text-xs text-gray-500 font-bold">{inv.customerName}</p>
+                  </div>
+                  <button onClick={() => setActiveActionMenuId(null)} className="text-gray-400 hover:text-red-500"><X size={24} /></button>
+                </div>
+                <div className="p-4 flex flex-col gap-2">
+                  <div className="flex justify-between items-center mb-4">
+                     <span className="text-sm font-bold text-gray-600">Total:</span>
+                     <span className="text-xl font-black text-brand-black">${inv.total.toLocaleString()}</span>
+                  </div>
+                  
+                  {storeSettings?.dianMode === 'PUENTE' ? (
+                     <>
+                        <button onClick={() => { downloadPuentePDF(inv); setActiveActionMenuId(null); }} className="w-full text-left flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl font-bold text-sm text-brand-black">
+                           <Download size={18} className="text-blue-500" /> Descargar PDF
+                        </button>
+                        <button onClick={() => { downloadResumen(inv); setActiveActionMenuId(null); }} className="w-full text-left flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl font-bold text-sm text-brand-black">
+                           <FileText size={18} className="text-orange-500" /> Resumen Portal
+                        </button>
+                        <button onClick={() => window.print()} className="w-full text-left flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl font-bold text-sm text-brand-black">
+                           <FileText size={18} className="text-gray-500" /> Imprimir
+                        </button>
+                        
+                        <div className="border-t border-gray-100 my-2 pt-2">
+                           <p className="text-xs font-bold text-gray-400 mb-2 px-3 uppercase tracking-wider">Portal DIAN</p>
+                           <a href="https://gratis-vpfe.dian.gov.co" target="_blank" rel="noreferrer" className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl font-bold text-sm text-brand-black">
+                               <Upload size={18} className="text-brand-black" /> Abrir Portal DIAN
+                           </a>
+                           {inv.dianStatus === 'REGISTRADA_MANUAL' ? (
+                               <div className="px-3 py-2 bg-green-50 text-green-700 rounded-lg text-xs font-bold mt-2 border border-green-100 flex flex-col gap-1">
+                                   <span>Registrada</span>
+                                   {inv.cufe && <span className="font-mono text-[10px] break-all">{inv.cufe}</span>}
+                               </div>
+                           ) : (
+                               <div className="mt-2 flex flex-col gap-2 px-3">
+                                   <input 
+                                     type="text" 
+                                     placeholder="Registrar CUFE aquí..." 
+                                     value={manualCufe[inv.id] || ''} 
+                                     onChange={e => setManualCufe({...manualCufe, [inv.id]: e.target.value})}
+                                     className="w-full text-xs border rounded-lg px-3 py-2 outline-none focus:border-brand-red text-brand-black"
+                                   />
+                                   <button onClick={() => { handleManualSave(inv); setActiveActionMenuId(null); }} className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-2">
+                                       <Save size={14} /> Guardar CUFE
+                                   </button>
+                               </div>
+                           )}
+                        </div>
+                     </>
+                  ) : (
+                     <>
+                        <button onClick={() => { downloadPuentePDF(inv); setActiveActionMenuId(null); }} className="w-full text-left flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl font-bold text-sm text-brand-black">
+                           <Download size={18} className="text-blue-500" /> Descargar PDF
+                        </button>
+                        <button onClick={() => window.print()} className="w-full text-left flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl font-bold text-sm text-brand-black">
+                           <FileText size={18} className="text-gray-500" /> Imprimir
+                        </button>
+                        
+                        <div className="border-t border-gray-100 my-2 pt-2">
+                           <p className="text-xs font-bold text-gray-400 mb-2 px-3 uppercase tracking-wider">DIAN Electrónica</p>
+                           {['DRAFT', 'SENDING', 'REJECTED'].includes(inv.dianStatus || '') && (
+                               <button onClick={() => { handleResend(inv); setActiveActionMenuId(null); }} className="w-full text-left flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl font-bold text-sm text-brand-black">
+                                   <Send size={18} className="text-brand-red" /> Enviar a la DIAN
+                               </button>
+                           )}
+                        </div>
+                     </>
+                  )}
+                </div>
+              </div>
+             );
+          })()}
         </div>
       )}
 

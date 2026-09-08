@@ -103,7 +103,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose }) =
               <div className="bg-green-100 p-1.5 rounded-full mt-0.5">
                 <Check className="w-4 h-4 text-green-600" />
               </div>
-              <p className="text-gray-700 text-lg">Facturación Electrónica DIAN Ilimitada</p>
+              <p className="text-gray-700 text-lg">Sistema DIAN Dual (Modo Puente o Directo)</p>
             </div>
             <div className="flex items-start gap-3">
               <div className="bg-green-100 p-1.5 rounded-full mt-0.5">

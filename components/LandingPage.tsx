@@ -241,7 +241,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onTermin
             </p>
             <ul className="space-y-4 mb-8">
               <li className="flex items-center gap-3 font-bold text-gray-700">
-                <div className="bg-green-100 text-green-600 p-1 rounded-full"><CheckCircle2 size={18} /></div> Facturación DIAN ilimitada
+                <div className="bg-green-100 text-green-600 p-1 rounded-full"><CheckCircle2 size={18} /></div> Sistema DIAN Dual (Modo Puente o Directo)
               </li>
               <li className="flex items-center gap-3 font-bold text-gray-700">
                 <div className="bg-green-100 text-green-600 p-1 rounded-full"><CheckCircle2 size={18} /></div> Inventario y POS incluidos, sin costo extra
@@ -285,6 +285,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onTermin
             <p className="text-sm font-bold text-gray-500 mb-6">
               Pesos Colombianos / {isAnnual ? 'año' : 'mes'}
             </p>
+            {isAnnual && (
+                <div className="mb-6 -mt-4">
+                  <span className="bg-green-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase shadow-lg">
+                    ¡Ahorras $99.800! (2 Meses Gratis)
+                  </span>
+                </div>
+            )}
             <button 
               onClick={onLoginClick}
               className="w-full bg-brand-red text-white px-4 py-4 rounded-xl font-black uppercase tracking-wider sm:tracking-widest text-xs sm:text-sm hover:bg-brand-black transition-all whitespace-normal sm:whitespace-nowrap flex items-center justify-center text-center"

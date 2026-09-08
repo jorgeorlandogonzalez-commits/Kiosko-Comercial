@@ -339,7 +339,7 @@ export const PricingPlans: React.FC<PricingPlansProps> = ({ onSelectPlan, isTria
               </div>
 
               <div className="space-y-3 mb-8 px-2">
-                  <Feature text="Facturación DIAN Ilimitada" active />
+                  <Feature text="Sistema DIAN Dual (Modo Puente o Directo)" active />
                   <Feature text="POS con Lector de Barras" active />
                   <Feature text="Control de Inventario y Kardex" active />
                   <Feature text="Cuentas por Cobrar (Fiados)" active />
